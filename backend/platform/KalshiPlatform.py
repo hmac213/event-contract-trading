@@ -1,9 +1,10 @@
 from datetime import datetime
 import time
 from typing import List
-from Market import Market
-from Orderbook import Orderbook
-from BasePlatform import BasePlatform, PlatformType
+from backend.models.Market import Market
+from backend.models.Orderbook import Orderbook
+from backend.platform.BasePlatform import BasePlatform
+from backend.models.PlatformType import PlatformType
 import requests
 from dotenv import load_dotenv
 
@@ -38,16 +39,50 @@ class KalshiPlatform(BasePlatform):
 
         for market_id in market_ids:
             response = self.session.get(f"{self.base_url}/markets/{market_id}/orderbook")
-            if response.status_code == 200:
+            response2 = self.session.get(f"{self.base_url}/markets/{market_id}")
+            if response.status_code == 200 and response2.status_code == 200:
+
                 data = response.json()["orderbook"]
+                data2 = response2.json()["market"]
+                highest_no_bid = data2["no_bid"]
+                highest_yes_bid = data2["yes_bid"]
+
 
                 yes_bids = [[], []]
                 yes_asks = [[], []]
                 no_bids = [[], []]
                 no_asks = [[], []]
-                # if yes max price > no max price, 
-                # then 
+                
+                yes = data["yes"]
+                no = data["no"] 
+                for a_yes in yes:
+                    if a_yes[0] < highest_yes_bid:
+                        yes_bids[0].append(a_yes[0] * 10)
+                        yes_bids[1].append(a_yes[1] * 100)
+                for a_no in no:
+                    if a_no[0] < highest_no_bid:
+                        no_bids[0].append(a_no[0] * 10)
+                        no_bids[1].append(a_no[1] * 100)
 
+                for i in range(len(yes_bids[0])):
+                    no_asks[0].append(1000 - yes_bids[0][i])
+                    no_asks[1].append(yes_bids[1][i])
+                for i in range(len(no_bids[0])):
+                    yes_asks[0].append(1000 - no_bids[0][i])
+                    yes_asks[1].append(no_bids[1][i])
+
+                
+               
+                orderbook = Orderbook(
+                    market_id=market_id,
+                    timestamp=int(time.time() * 1000),
+                    yes={"bid": yes_bids, "ask": yes_asks},
+                    no={"bid": no_bids, "ask": no_asks}
+                )
+
+                orderbooks.append(orderbook)
+
+        return orderbooks
 
     def find_new_markets(self, num_markets: int) -> List[str]:
         """

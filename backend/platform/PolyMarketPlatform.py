@@ -1,9 +1,10 @@
 from datetime import datetime
 import time
 from typing import List, Dict
-from Market import Market
-from Orderbook import Orderbook
-from BasePlatform import BasePlatform, PlatformType
+from backend.models.Market import Market
+from backend.models.Orderbook import Orderbook
+from backend.platform.BasePlatform import BasePlatform
+from backend.models.PlatformType import PlatformType
 from py_clob_client.client import ClobClient 
 from py_clob_client.clob_types import BookParams
 from dotenv import load_dotenv
