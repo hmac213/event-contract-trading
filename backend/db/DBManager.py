@@ -2,18 +2,47 @@ from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 from supabase import create_client
 import os
-
+import math
 class DBManager():
     def __init__(self):
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_key = os.getenv("SUPABASE_KEY")
         self.supabase = create_client(self.supabase_url, self.supabase_key)
 
-    def add_markets(self, markets: list[Market]) -> None:
+
+    def add_market_pairs(self, market_pairs: list[list[Market]]) -> None:
+        sql_pairs = []
+        for pair in market_pairs:
+            if len(pair) != 2:
+                continue  # skip incomplete or malformed pairs
+
+            m1, m2 = pair[0], pair[1]
+            id1, id2 = m1.market_id, m2.market_id
+
+            # Enforce order to satisfy CHECK constraint: market_id_1 < market_id_2
+            if id1 < id2:
+                sql_pairs.append({"market_id_1": id1, "market_id_2": id2})
+            else:
+                sql_pairs.append({"market_id_1": id2, "market_id_2": id1})
+
+        if sql_pairs:
+            self.supabase.table("market_pairs").insert(sql_pairs).execute()
+
+    def get_all_market_pairs(self) -> list[list[str]]:
+        """
+        Returns all market pairs from the database.
+        Each pair is a list of two market IDs.
+        """
+        response = self.supabase.table("market_pairs").select("market_id_1, market_id_2").execute()
+        if response.data:
+            return [[row["market_id_1"], row["market_id_2"]] for row in response.data]
+        return []
+    
+    def add_markets(self, markets: list[Market], chunk_size: int = 100) -> None:
         # Convert Market objects to dictionaries
         sql_markets = []
         market_ids = []
-        
+
         for m in markets:
             sql_markets.append({
                 "platform": m.platform.value,
@@ -24,15 +53,20 @@ class DBManager():
             })
             market_ids.append(m.market_id)
 
-        # Query existing market_ids
-        existing_response = (
-            self.supabase.table("markets")
-            .select("market_id")
-            .in_("market_id", market_ids)
-            .execute()
-        )
+        # Chunk market_ids to avoid URI too large error
+        existing_ids = set()
+        total_chunks = math.ceil(len(market_ids) / chunk_size)
 
-        existing_ids = set(row["market_id"] for row in existing_response.data)
+        for i in range(total_chunks):
+            chunk = market_ids[i * chunk_size:(i + 1) * chunk_size]
+            response = (
+                self.supabase.table("markets")
+                .select("market_id")
+                .in_("market_id", chunk)
+                .execute()
+            )
+            if response.data:
+                existing_ids.update(row["market_id"] for row in response.data)
 
         # Filter out already existing markets
         new_markets = [m for m in sql_markets if m["market_id"] not in existing_ids]
@@ -41,11 +75,11 @@ class DBManager():
             print("All markets already exist in the database.")
             return
 
-        # Insert only new markets
-        self.supabase.table("markets").insert(new_markets).execute()
-        
-        
-            
+        # Insert only new markets (chunk again if needed for safety)
+        for i in range(0, len(new_markets), chunk_size):
+            self.supabase.table("markets").insert(new_markets[i:i + chunk_size]).execute()
+
+    
 
     def add_orderbooks(self, orderbooks: list[Orderbook]) -> None:
         # Convert Orderbook objects to dictionaries
@@ -66,22 +100,24 @@ class DBManager():
     def new_markets(self, market_ids: list[str]) -> list[str]:
         """
         Returns a list of market IDs that are not already in the database.
+        Automatically chunks queries to avoid URL length limits.
         """
-
         if not market_ids:
             return []
 
-        # Query existing market_ids
-        response = (
-            self.supabase.table("markets")
-            .select("market_id")
-            .in_("market_id", market_ids)
-            .execute()
-        )
+        def chunk_list(lst, size):
+            for i in range(0, len(lst), size):
+                yield lst[i:i + size]
 
-        existing_ids = set(row["market_id"] for row in response.data)
+        existing_ids = set()
+        for chunk in chunk_list(market_ids, 50):
+            response = (
+                self.supabase.table("markets")
+                .select("market_id")
+                .in_("market_id", chunk)
+                .execute()
+            )
+            if response.data:
+                existing_ids.update(row["market_id"] for row in response.data)
 
-        # Filter out existing market IDs
-        new_market_ids = [m_id for m_id in market_ids if m_id not in existing_ids]
-
-        return new_market_ids
+        return [m_id for m_id in market_ids if m_id not in existing_ids]

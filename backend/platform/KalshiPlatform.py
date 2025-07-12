@@ -131,24 +131,23 @@ class KalshiPlatform(BasePlatform):
             return []
 
         markets = []
-        for market_id in market_ids:
-            response = self.session.get(f"{self.base_url}/markets/{market_id}")
+        while len(markets) < len(market_ids):
+            limited_request_ids = market_ids[len(markets):len(markets) + 50]
+            response = self.session.get(f"{self.base_url}/markets?tickers={','.join(limited_request_ids)}")
             if response.status_code == 200:
-                data = response.json()["market"]
-                close_iso_time = data["close_time"]
-                dt = datetime.strptime(close_iso_time, "%Y-%m-%dT%H:%M:%SZ")
-                unix_ts = int(dt.timestamp())
+                data = response.json()["markets"]
+                for a_market in data:
+                    close_iso_time = a_market["close_time"]
+                    dt = datetime.strptime(close_iso_time, "%Y-%m-%dT%H:%M:%SZ")
+                    unix_ts = int(dt.timestamp())
 
-                market = Market(
-                    platform=PlatformType.KALSHI,
-                    market_id=data['ticker'],
-                    name=data['title'],
-                    rules=data['rules_primary'],
-                    close_timestamp=unix_ts
-                )
-                markets.append(market)
-            else:
-                print(f"Failed to fetch market {market_id}: {response.status_code} - {response.text}")
-
+                    market = Market(
+                        platform=PlatformType.KALSHI,
+                        market_id=a_market['ticker'],
+                        name=a_market['title'],
+                        rules=a_market['rules_primary'],
+                        close_timestamp=unix_ts
+                    )
+                    markets.append(market)
         return markets
 

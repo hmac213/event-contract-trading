@@ -1,15 +1,15 @@
 from datetime import datetime
 import time
-from typing import List, Dict
+from typing import List
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 from backend.platform.BasePlatform import BasePlatform
-from backend.models.PlatformType import PlatformType
 from py_clob_client.client import ClobClient 
-from py_clob_client.clob_types import BookParams
 from dotenv import load_dotenv
 import os
-
+import requests
+from backend.models.PlatformType import PlatformType
+import logging
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
     """
@@ -20,11 +20,15 @@ class PolyMarketPlatform(BasePlatform):
     """
     
     def __init__(self):
+        # for CLOB client access
         host: str = "https://clob.polymarket.com"
         key: str = os.getenv("PRIVATE_KEY")
         POLYMARKET_PROXY_ADDRESS : str = os.getenv("PROXY_ADDRESS")
         chain_id: int = 137
         self.client = ClobClient(host, key=key, chain_id=chain_id, signature_type=2, funder=POLYMARKET_PROXY_ADDRESS)
+
+        # for Gamma API access
+        self.base_url = "https://gamma-api.polymarket.com"
 
     def get_order_books(self, market_ids: List[str]) -> List[Orderbook]:
         
@@ -100,55 +104,67 @@ class PolyMarketPlatform(BasePlatform):
         """
 
         num_requests = 0
-        new_markets = []
-        next_cursor = ""
-
-        while num_requests < num_markets and next_cursor != "LTE=":
+        new_markets = set()
+        page_offset = 0
+        while num_requests < num_markets:
             # https://gamma-api.polymarket.com/markets?order=id&closed=false&active=true&ascending=false
-            req = self.client.get_simplified_markets(next_cursor=next_cursor)
-            next_cursor = req.get("next_cursor", "LTE=")
+            response = requests.request("GET", f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit=1000&offset={page_offset}")
 
-            for a_market in req["data"]:
+            for a_market in response.json():
+                if a_market.get("endDateIso") is not None and a_market["endDateIso"] is not None:
+                    condition_id = a_market.get("conditionId")
+                    if condition_id and condition_id not in new_markets:
+                        new_markets.add(condition_id)
+                        num_requests += 1
+                        if num_requests >= num_markets:
+                            break
+            page_offset += 1000
+        return list(new_markets)
 
-                # check if we want to include this market
-                condition_id_exists = a_market["condition_id"] is not None and a_market["condition_id"] != ""
-
-                # uses yes and no tokens to determine if the market is active
-                uses_binary_tokens = a_market["tokens"][0]["outcome"] == "Yes" and a_market["tokens"][1]["outcome"] == "No" 
-
-                market_is_active = a_market["active"] and a_market["closed"] is False
-                if condition_id_exists and uses_binary_tokens and market_is_active:
-                    new_markets.append(a_market["condition_id"])
-                    num_requests += 1
-                    if num_requests >= num_markets:
-                        break
-        return new_markets
-    
     def get_markets(self, market_ids: List[str]) -> List[Market]:
         """
-        Get market details for the specified market IDs.
-        
+        Get market details for the specified market IDs using the Gamma REST API.
+
         Args:
-            market_ids: List of market IDs to get details for
-            
+            market_ids: List of condition IDs (market IDs) to retrieve
+
         Returns:
             List of Market objects with market information
         """
-        ans = []
-        for market_id in market_ids:
-            a_polymarket_market = self.client.get_market(condition_id=market_id)
-            a_token = a_polymarket_market["tokens"]
-            close_iso_time = a_polymarket_market["end_date_iso"]
-            dt = datetime.strptime(close_iso_time, "%Y-%m-%dT%H:%M:%SZ")
+        market_id_set = set(market_ids)
+        matched_markets = []
 
-            unix_ts = int(dt.timestamp())
-            ans.append(Market(
-                platform=PlatformType.POLYMARKET,
-                market_id=market_id,
-                name=a_polymarket_market["question"],  
-                rules= "Binary Token 0: " + a_token[0]["outcome"] + ", Binary Token 1: " + a_token[1]["outcome"],  
-                close_timestamp=unix_ts
-            ))
+        offset = 0
+        limit = 1000
+        seen_ids = set()
+        
 
-        return ans
+        while len(seen_ids) < len(market_id_set):
+            url = f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit={limit}&offset={offset}"
+            response = requests.get(url)
+            response.raise_for_status()
+
+            markets = response.json()
+            if not markets:
+                break  # no more data
+            for m in markets:
+                logging.debug(f"abcdeProcessing market: {m.get('conditionId')}")
+                cid = m.get("conditionId")
+                if cid in market_id_set:
+                
+                    iso = m["endDate"]
+                    dt = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ")
+                    unix_ts = int(dt.timestamp())
+
+                    matched_markets.append(Market(
+                        platform=PlatformType.POLYMARKET,
+                        market_id=cid,
+                        name=m["question"],
+                        rules=m["description"],
+                        close_timestamp=unix_ts
+                    ))
+                    seen_ids.add(cid)
+            offset += 1000
+
+        return matched_markets
 
