@@ -1,0 +1,16 @@
+# Core dependencies for event contract trading platform
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# PolyMarket integration
+py-clob-client>=1.0.0
+
+# Standard library dependencies (included with Python)
+# datetime - built-in
+# time - built-in  
+# typing - built-in
+# abc - built-in
+# enum - built-in
+# os - built-in
+# random - built-in
+# string - built-in
