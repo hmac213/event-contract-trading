@@ -47,9 +47,41 @@ class DBManager():
         
             
 
-    def add_book_order(self, orderbook: Orderbook) -> None:
-        pass
+    def add_orderbooks(self, orderbooks: list[Orderbook]) -> None:
+        # Convert Orderbook objects to dictionaries
+        sql_orderbooks = []
+        for ob in orderbooks:
+            sql_orderbooks.append({
+                "market_id": ob.market_id,
+                "timestamp": ob.timestamp,
+                "yes_bid": ob.yes["bid"],
+                "yes_ask": ob.yes["ask"],
+                "no_bid": ob.no["bid"],
+                "no_ask": ob.no["ask"]
+            })
 
-    def get_order_books(self, market_ids: list[str]) -> list[Orderbook]:
+        # Insert orderbooks into the database
+        self.supabase.table("orderbooks").insert(sql_orderbooks).execute()
+    
+    def new_markets(self, market_ids: list[str]) -> list[str]:
+        """
+        Returns a list of market IDs that are not already in the database.
+        """
 
-        pass
+        if not market_ids:
+            return []
+
+        # Query existing market_ids
+        response = (
+            self.supabase.table("markets")
+            .select("market_id")
+            .in_("market_id", market_ids)
+            .execute()
+        )
+
+        existing_ids = set(row["market_id"] for row in response.data)
+
+        # Filter out existing market IDs
+        new_market_ids = [m_id for m_id in market_ids if m_id not in existing_ids]
+
+        return new_market_ids

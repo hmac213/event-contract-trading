@@ -104,6 +104,7 @@ class PolyMarketPlatform(BasePlatform):
         next_cursor = ""
 
         while num_requests < num_markets and next_cursor != "LTE=":
+            # https://gamma-api.polymarket.com/markets?order=id&closed=false&active=true&ascending=false
             req = self.client.get_simplified_markets(next_cursor=next_cursor)
             next_cursor = req.get("next_cursor", "LTE=")
 
