@@ -67,7 +67,7 @@ class KalshiPlatform(BasePlatform):
         cursor = ""
         while curr_num_markets < num_markets:
             num_pages_to_fetch = min((num_markets - curr_num_markets), 1000)
-            response = self.session.get(f"{self.base_url}/markets?limit={num_pages_to_fetch}&cursor={cursor}")
+            response = self.session.get(f"{self.base_url}/markets?limit={num_pages_to_fetch}&cursor={cursor}&status=open")
 
             parsed_response = response.json()
 
