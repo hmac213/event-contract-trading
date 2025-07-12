@@ -32,6 +32,7 @@ from backend.platform.TestPlatform import TestPlatform
 from backend.platform.PolyMarketPlatform import PolyMarketPlatform
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
+from backend.models.PlatformType import PlatformType
 
 
 class DepthChartVisualizer:
@@ -40,12 +41,12 @@ class DepthChartVisualizer:
     def __init__(self):
         """Initialize the visualizer with platform instances."""
         self.platforms = {
-            'Kalshi': KalshiPlatform(),
-            'Test': TestPlatform(),
-            'PolyMarket': PolyMarketPlatform()
+            PlatformType.KALSHI: KalshiPlatform(),
+            PlatformType.TEST: TestPlatform(),
+            PlatformType.POLYMARKET: PolyMarketPlatform()
         }
     
-    def normalize_price(self, price: float, platform_type: str = 'default') -> float:
+    def normalize_price(self, price: float) -> float:
         return price /1000
     
     def calculate_cumulative_depth(self, prices: List[float], quantities: List[float], 
@@ -153,16 +154,14 @@ class DepthChartVisualizer:
         
         return metrics
     
-    def plot_depth_chart(self, market: Market, orderbook: Orderbook, ax, 
-                        show_raw: bool = False) -> None:
+    def plot_depth_chart(self, market: Market, orderbook: Orderbook, ax) -> None:
         """
-        Plot depth chart for a single market.
+        Plot cumulative depth chart for a single market.
         
         Args:
             market: Market object with name and platform info
             orderbook: Order book data
             ax: Matplotlib axis to plot on
-            show_raw: If True, show raw quantities instead of cumulative
         """
         # Extract data
         yes_bid_prices = orderbook.yes.get('bid', [[], []])[0] if orderbook.yes else []
@@ -176,66 +175,46 @@ class DepthChartVisualizer:
         no_ask_quantities = orderbook.no.get('ask', [[], []])[1] if orderbook.no else []
         
         # Normalize prices
-        platform_name = market.platform.value.lower()
-        
+    
         if yes_bid_prices:
-            yes_bid_prices = [self.normalize_price(p, platform_name) for p in yes_bid_prices]
+            yes_bid_prices = [self.normalize_price(p) for p in yes_bid_prices]
         if yes_ask_prices:
-            yes_ask_prices = [self.normalize_price(p, platform_name) for p in yes_ask_prices]
+            yes_ask_prices = [self.normalize_price(p) for p in yes_ask_prices]
         if no_bid_prices:
-            no_bid_prices = [self.normalize_price(p, platform_name) for p in no_bid_prices]
+            no_bid_prices = [self.normalize_price(p) for p in no_bid_prices]
         if no_ask_prices:
-            no_ask_prices = [self.normalize_price(p, platform_name) for p in no_ask_prices]
+            no_ask_prices = [self.normalize_price(p) for p in no_ask_prices]
         
-        # Calculate cumulative or raw quantities
-        if show_raw:
-            # Show raw order book data as step functions
-            if yes_bid_prices and yes_bid_quantities:
-                ax.step(yes_bid_prices, yes_bid_quantities, where='post', 
-                       color='#2E8B57', linewidth=2, alpha=0.8, label='Yes Bids')
-            
-            if yes_ask_prices and yes_ask_quantities:
-                ax.step(yes_ask_prices, yes_ask_quantities, where='post', 
-                       color='#DC143C', linewidth=2, alpha=0.8, label='Yes Asks')
-            
-            if no_bid_prices and no_bid_quantities:
-                ax.step(no_bid_prices, no_bid_quantities, where='post', 
-                       color='#228B22', linewidth=2, alpha=0.8, linestyle='--', label='No Bids')
-            
-            if no_ask_prices and no_ask_quantities:
-                ax.step(no_ask_prices, no_ask_quantities, where='post', 
-                       color='#B22222', linewidth=2, alpha=0.8, linestyle='--', label='No Asks')
-        else:
-            # Calculate and plot cumulative depth
-            yes_bid_cum_prices, yes_bid_cum_qtys = self.calculate_cumulative_depth(
-                yes_bid_prices, yes_bid_quantities, is_bid=True)
-            yes_ask_cum_prices, yes_ask_cum_qtys = self.calculate_cumulative_depth(
-                yes_ask_prices, yes_ask_quantities, is_bid=False)
-            no_bid_cum_prices, no_bid_cum_qtys = self.calculate_cumulative_depth(
-                no_bid_prices, no_bid_quantities, is_bid=True)
-            no_ask_cum_prices, no_ask_cum_qtys = self.calculate_cumulative_depth(
-                no_ask_prices, no_ask_quantities, is_bid=False)
-            
-            # Plot cumulative depth curves
-            if yes_bid_cum_prices:
-                ax.plot(yes_bid_cum_prices, yes_bid_cum_qtys, 
-                       color='#2E8B57', linewidth=3, alpha=0.8, label='Yes Bids (Cumulative)')
-                ax.fill_between(yes_bid_cum_prices, yes_bid_cum_qtys, alpha=0.2, color='#2E8B57')
-            
-            if yes_ask_cum_prices:
-                ax.plot(yes_ask_cum_prices, yes_ask_cum_qtys, 
-                       color='#DC143C', linewidth=3, alpha=0.8, label='Yes Asks (Cumulative)')
-                ax.fill_between(yes_ask_cum_prices, yes_ask_cum_qtys, alpha=0.2, color='#DC143C')
-            
-            if no_bid_cum_prices:
-                ax.plot(no_bid_cum_prices, no_bid_cum_qtys, 
-                       color='#228B22', linewidth=3, alpha=0.8, linestyle='--', label='No Bids (Cumulative)')
-                ax.fill_between(no_bid_cum_prices, no_bid_cum_qtys, alpha=0.15, color='#228B22')
-            
-            if no_ask_cum_prices:
-                ax.plot(no_ask_cum_prices, no_ask_cum_qtys, 
-                       color='#B22222', linewidth=3, alpha=0.8, linestyle='--', label='No Asks (Cumulative)')
-                ax.fill_between(no_ask_cum_prices, no_ask_cum_qtys, alpha=0.15, color='#B22222')
+        # Calculate and plot cumulative depth
+        yes_bid_cum_prices, yes_bid_cum_qtys = self.calculate_cumulative_depth(
+            yes_bid_prices, yes_bid_quantities, is_bid=True)
+        yes_ask_cum_prices, yes_ask_cum_qtys = self.calculate_cumulative_depth(
+            yes_ask_prices, yes_ask_quantities, is_bid=False)
+        no_bid_cum_prices, no_bid_cum_qtys = self.calculate_cumulative_depth(
+            no_bid_prices, no_bid_quantities, is_bid=True)
+        no_ask_cum_prices, no_ask_cum_qtys = self.calculate_cumulative_depth(
+            no_ask_prices, no_ask_quantities, is_bid=False)
+        
+        # Plot cumulative depth curves
+        if yes_bid_cum_prices:
+            ax.plot(yes_bid_cum_prices, yes_bid_cum_qtys, 
+                   color='#2E8B57', linewidth=3, alpha=0.8, label='Yes Bids (Cumulative)')
+            ax.fill_between(yes_bid_cum_prices, yes_bid_cum_qtys, alpha=0.2, color='#2E8B57')
+        
+        if yes_ask_cum_prices:
+            ax.plot(yes_ask_cum_prices, yes_ask_cum_qtys, 
+                   color='#DC143C', linewidth=3, alpha=0.8, label='Yes Asks (Cumulative)')
+            ax.fill_between(yes_ask_cum_prices, yes_ask_cum_qtys, alpha=0.2, color='#DC143C')
+        
+        if no_bid_cum_prices:
+            ax.plot(no_bid_cum_prices, no_bid_cum_qtys, 
+                   color='#228B22', linewidth=3, alpha=0.8, linestyle='--', label='No Bids (Cumulative)')
+            ax.fill_between(no_bid_cum_prices, no_bid_cum_qtys, alpha=0.15, color='#228B22')
+        
+        if no_ask_cum_prices:
+            ax.plot(no_ask_cum_prices, no_ask_cum_qtys, 
+                   color='#B22222', linewidth=3, alpha=0.8, linestyle='--', label='No Asks (Cumulative)')
+            ax.fill_between(no_ask_cum_prices, no_ask_cum_qtys, alpha=0.15, color='#B22222')
         
         # Calculate and display market metrics
         metrics = self.calculate_market_metrics(orderbook)
@@ -250,12 +229,11 @@ class DepthChartVisualizer:
         if len(title) > 60:
             title = title[:57] + "..."
         
-        chart_type = "Raw Order Book" if show_raw else "Depth Chart"
-        ax.set_title(f"{title}\n{chart_type} - {market.platform.value}", 
+        ax.set_title(f"{title}\nDepth Chart - {market.platform.value}", 
                     fontsize=11, fontweight='bold', pad=20)
         
         ax.set_xlabel('Price (Probability)', fontsize=10)
-        ax.set_ylabel('Cumulative Quantity' if not show_raw else 'Quantity', fontsize=10)
+        ax.set_ylabel('Cumulative Quantity', fontsize=10)
         ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
         
         # Format x-axis as percentages
@@ -286,29 +264,29 @@ class DepthChartVisualizer:
                    fontsize=8, verticalalignment='top', bbox=dict(boxstyle='round', 
                    facecolor='white', alpha=0.8))
     
-    def get_platform_data(self, platform_name: str, num_markets: int = 1) -> Tuple[List[Market], List[Orderbook]]:
+    def get_platform_data(self, platform_type: PlatformType, num_markets: int = 1) -> Tuple[List[Market], List[Orderbook]]:
         """
         Get market and order book data from a platform.
         
         Args:
-            platform_name: Name of the platform
+            platform_type: PlatformType enum value
             num_markets: Number of markets to fetch
             
         Returns:
             Tuple of (markets, orderbooks)
         """
-        if platform_name not in self.platforms:
-            print(f"Unknown platform: {platform_name}")
+        if platform_type not in self.platforms:
+            print(f"Unknown platform: {platform_type}")
             return [], []
         
-        platform = self.platforms[platform_name]
-        print(f"Fetching {num_markets} market(s) from {platform_name}...")
+        platform = self.platforms[platform_type]
+        print(f"Fetching {num_markets} market(s) from {platform_type.value}...")
         
         try:
             # Get market IDs
             market_ids = platform.find_new_markets(num_markets)
             if not market_ids:
-                print(f"No market IDs found for {platform_name}")
+                print(f"No market IDs found for {platform_type.value}")
                 return [], []
             
             print(f"Found market IDs: {market_ids}")
@@ -324,36 +302,35 @@ class DepthChartVisualizer:
             return markets, orderbooks
             
         except Exception as e:
-            print(f"Error fetching data from {platform_name}: {e}")
+            print(f"Error fetching data from {platform_type.value}: {e}")
             import traceback
             traceback.print_exc()
             return [], []
     
-    def create_depth_chart_comparison(self, platform_names: List[str] = None, 
-                                    num_markets: int = 1, show_raw: bool = False,
+    def create_depth_chart_comparison(self, platform_types: List[PlatformType] = None, 
+                                    num_markets: int = 1,
                                     save_to_file: bool = False, filename: str = None) -> None:
         """
         Create depth chart comparison across multiple platforms.
         
         Args:
-            platform_names: List of platform names to compare
+            platform_types: List of PlatformType enum values to compare
             num_markets: Number of markets per platform
-            show_raw: If True, show raw quantities instead of cumulative
             save_to_file: If True, save plot to file
             filename: Optional filename for saving
         """
-        if platform_names is None:
-            platform_names = ['Kalshi', 'Test', 'PolyMarket']
+        if platform_types is None:
+            platform_types = [PlatformType.KALSHI, PlatformType.TEST, PlatformType.POLYMARKET]
         
         print("=== Depth Chart Visualization Starting ===")
         
         # Collect data from platforms
         all_data = []
-        for platform_name in platform_names:
-            markets, orderbooks = self.get_platform_data(platform_name, num_markets)
+        for platform_type in platform_types:
+            markets, orderbooks = self.get_platform_data(platform_type, num_markets)
             if markets and orderbooks:
                 for market, orderbook in zip(markets, orderbooks):
-                    all_data.append((platform_name, market, orderbook))
+                    all_data.append((platform_type, market, orderbook))
         
         if not all_data:
             print("No data available for depth chart visualization!")
@@ -366,8 +343,7 @@ class DepthChartVisualizer:
         rows = (len(all_data) + cols - 1) // cols
         
         fig, axes = plt.subplots(rows, cols, figsize=(7 * cols, 6 * rows))
-        chart_type = "Raw Order Book" if show_raw else "Market Depth Chart"
-        fig.suptitle(f'{chart_type} Comparison - Prediction Markets', 
+        fig.suptitle('Market Depth Chart Comparison - Prediction Markets', 
                     fontsize=16, fontweight='bold')
         
         # Handle single subplot case
@@ -379,10 +355,10 @@ class DepthChartVisualizer:
             axes = axes.flatten()
         
         # Plot each market
-        for idx, (platform_name, market, orderbook) in enumerate(all_data):
+        for idx, (platform_type, market, orderbook) in enumerate(all_data):
             if idx < len(axes):
-                print(f"  Plotting {platform_name}: {market.name[:30]}...")
-                self.plot_depth_chart(market, orderbook, axes[idx], show_raw)
+                print(f"  Plotting {platform_type.value}: {market.name[:30]}...")
+                self.plot_depth_chart(market, orderbook, axes[idx])
         
         # Hide unused subplots
         for idx in range(len(all_data), len(axes)):
@@ -396,8 +372,7 @@ class DepthChartVisualizer:
         if save_to_file:
             if filename is None:
                 test_dir = os.path.dirname(os.path.abspath(__file__))
-                chart_type_str = "raw_orderbook" if show_raw else "depth_chart"
-                filename = os.path.join(test_dir, f"{chart_type_str}_visualization.png")
+                filename = os.path.join(test_dir, "depth_chart_visualization.png")
             elif not os.path.isabs(filename):
                 test_dir = os.path.dirname(os.path.abspath(__file__))
                 filename = os.path.join(test_dir, filename)
@@ -415,23 +390,13 @@ def test_depth_chart():
     try:
         visualizer = DepthChartVisualizer()
         
-        # Test with different configurations
+        # Test cumulative depth chart
         print("Testing cumulative depth chart...") 
         visualizer.create_depth_chart_comparison(
-            platform_names=['Kalshi', 'PolyMarket'], 
-            num_markets=3, 
-            show_raw=False,
+            platform_types=[PlatformType.KALSHI, PlatformType.POLYMARKET], 
+            num_markets=3,
             save_to_file=True, 
             filename="test_depth_chart_cumulative.png"
-        )
-        
-        print("\nTesting raw order book chart...")
-        visualizer.create_depth_chart_comparison(
-            platform_names=['Kalshi', 'PolyMarket'], 
-            num_markets=3, 
-            show_raw=True,
-            save_to_file=True, 
-            filename="test_depth_chart_raw.png"
         )
         
         print("✅ Depth chart test completed successfully!")
@@ -452,9 +417,8 @@ def main():
         # Create cumulative depth chart
         print("Creating depth chart visualization...")
         visualizer.create_depth_chart_comparison(
-            platform_names=['Kalshi', 'Test', 'PolyMarket'],
+            platform_types=[PlatformType.KALSHI, PlatformType.TEST, PlatformType.POLYMARKET],
             num_markets=1,
-            show_raw=False,
             save_to_file=False
         )
         
