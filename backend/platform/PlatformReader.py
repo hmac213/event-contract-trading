@@ -7,8 +7,8 @@ This script shows the complete workflow:
 3. Getting order books for the markets
 """
 
-from KalshiPlatform import KalshiPlatform
-from PolyMarketPlatform import PolyMarketPlatform
+from backend.platform.KalshiPlatform import KalshiPlatform
+from backend.platform.PolyMarketPlatform import PolyMarketPlatform
 from datetime import datetime
 
 def print_separator(title):

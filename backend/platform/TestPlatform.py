@@ -1,7 +1,7 @@
 # extends Base Market
-from Market import Market
-from Orderbook import Orderbook
-from BasePlatform import BasePlatform, PlatformType
+from backend.models.Market import Market
+from backend.models.Orderbook import Orderbook
+from backend.platform.BasePlatform import BasePlatform, PlatformType
 from random import randint, random
 import time
 import string

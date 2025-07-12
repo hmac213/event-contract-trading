@@ -4,8 +4,8 @@ from typing import Any, TYPE_CHECKING
 from enum import Enum
 
 if TYPE_CHECKING:
-    from Market import Market
-    from Orderbook import Orderbook
+    from backend.models.Market import Market
+    from backend.models.Orderbook import Orderbook
 
 class PlatformType(Enum):
     KALSHI = "KALSHI"

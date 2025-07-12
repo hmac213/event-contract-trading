@@ -1,4 +1,4 @@
-from BasePlatform import PlatformType
+from backend.platform.BasePlatform import PlatformType
 
 class Market():
     def __init__(self, platform: PlatformType,market_id: str, name: str, rules: str, close_timestamp: int):
