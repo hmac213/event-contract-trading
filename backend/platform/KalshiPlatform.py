@@ -62,14 +62,15 @@ class KalshiPlatform(BasePlatform):
                     if a_no[0] < highest_no_bid:
                         no_bids[0].append(a_no[0] * 10)
                         no_bids[1].append(a_no[1] * 100)
+
+                for i in range(len(yes_bids[0])):
+                    no_asks[0].append(1000 - yes_bids[0][i])
+                    no_asks[1].append(yes_bids[1][i])
+                for i in range(len(no_bids[0])):
+                    yes_asks[0].append(1000 - no_bids[0][i])
+                    yes_asks[1].append(no_bids[1][i])
+
                 
-                for yes_bid in yes_bids[0]:
-                    no_asks[0].append(1000 - yes_bid)
-                    no_asks[1].append(yes_bid)
-                
-                for no_bid in no_bids[0]:
-                    yes_asks[0].append(1000 - no_bid)
-                    yes_asks[1].append(no_bid)
                
                 orderbook = Orderbook(
                     market_id=market_id,
