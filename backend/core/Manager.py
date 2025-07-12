@@ -54,11 +54,32 @@ class Manager():
     def check_arbitrage(self):
         self.logger.info("Checking for arbitrage opportunities...")
         market_pairs = self.db_manager.get_all_market_pairs()
-        self.logger.info("Got market pairs: %s", market_pairs)
 
+        # Step 1: Collect all unique market IDs across all pairs
+        unique_market_ids = set()
         for pair in market_pairs:
-            orderbooks = self.db_manager.get_orderbooks(pair)
-        
+            unique_market_ids.update(pair)
+
+        # Step 2: Get all Market objects in one DB call
+        markets = self.db_manager.get_markets(list(unique_market_ids))
+        market_by_id = {m.market_id: m for m in markets}
+
+        # Step 3: Group market IDs by platform for batch orderbook fetching
+        market_ids_by_platform = {}
+        for market in markets:
+            market_ids_by_platform.setdefault(market.platform, []).append(market.market_id)
+
+        # Step 4: Fetch all orderbooks in bulk per platform
+        all_orderbooks = []
+        for platform, ids in market_ids_by_platform.items():
+            orderbooks = self.platforms[platform].get_order_books(ids)
+            all_orderbooks.extend(orderbooks)
+
+        # Step 5: Store all orderbooks
+        self.db_manager.add_orderbooks(all_orderbooks)
+
+        # Optional: You can still loop through pairs to evaluate arbitrage if needed
+
 
 if __name__ == "__main__":
     manager = Manager(verbose=False)

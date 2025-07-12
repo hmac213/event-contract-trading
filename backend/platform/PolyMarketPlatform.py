@@ -5,6 +5,7 @@ from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 from backend.platform.BasePlatform import BasePlatform
 from py_clob_client.client import ClobClient 
+from py_clob_client.clob_types import BookParams
 from dotenv import load_dotenv
 import os
 import requests
@@ -45,12 +46,12 @@ class PolyMarketPlatform(BasePlatform):
         orderbooks = []
         for market_id in market_ids:
             polymarket_market = self.client.get_market(condition_id=market_id)
-
+            
             yes_token = polymarket_market["tokens"][0]["token_id"]
-            yes_order_book = self.client.get_order_book(token_id=yes_token)
+            #yes_order_book = self.client.get_order_book(token_id=yes_token)
             no_token = polymarket_market["tokens"][1]["token_id"]
-            no_order_book = self.client.get_order_book(token_id=no_token)
-
+            #no_order_book = self.client.get_order_book(token_id=no_token)
+            [yes_order_book, no_order_book] = self.client.get_order_books(params=[BookParams(token_id=yes_token), BookParams(token_id=no_token)])
             yes_book = {
                     "bid": [[], []],
                     "ask": [[], []]

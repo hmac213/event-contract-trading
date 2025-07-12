@@ -1,3 +1,4 @@
+from backend.models import PlatformType
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 from supabase import create_client
@@ -79,7 +80,32 @@ class DBManager():
         for i in range(0, len(new_markets), chunk_size):
             self.supabase.table("markets").insert(new_markets[i:i + chunk_size]).execute()
 
-    
+    def get_markets(self, market_ids: list[str]) -> list[Market]:
+        """
+        Returns a list of Market objects for the given market IDs.
+        """
+        if not market_ids:
+            return []
+
+        response = (
+            self.supabase.table("markets")
+            .select("*")
+            .in_("market_id", market_ids)
+            .execute()
+        )
+
+        markets = []
+        for row in response.data:
+            market = Market(
+                platform=PlatformType(row["platform"]),
+                market_id=row["market_id"],
+                name=row["name"],
+                rules=row["rules"],
+                close_timestamp=row["close_timestamp"]
+            )
+            markets.append(market)
+
+        return markets
 
     def add_orderbooks(self, orderbooks: list[Orderbook]) -> None:
         # Convert Orderbook objects to dictionaries

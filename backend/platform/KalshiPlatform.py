@@ -54,7 +54,11 @@ class KalshiPlatform(BasePlatform):
                 no_asks = [[], []]
                 
                 yes = data["yes"]
+                if yes is None:
+                    yes = []
                 no = data["no"] 
+                if no is None:
+                    no = []
                 for a_yes in yes:
                     if a_yes[0] < highest_yes_bid:
                         yes_bids[0].append(a_yes[0] * 10)
