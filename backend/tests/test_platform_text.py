@@ -66,7 +66,6 @@ def print_orderbook_data(orderbook):
         no_ask_quantities = orderbook.no['ask'][1]  # quantities
         print(f"    Asks (All): Prices={no_asks}, Quantities={no_ask_quantities}")
 
-
 def test_platform(platform, platform_name: str, num_markets: int = 3):
     """
     Test a specific platform with comprehensive logging.
@@ -116,7 +115,7 @@ def test_platform(platform, platform_name: str, num_markets: int = 3):
         for i, orderbook in enumerate(orderbooks, 1):
             print(f"\n--- Order Book {i} ---")
             print_orderbook_data(orderbook)
-        
+
         print(f"\n✅ {platform_name} test completed successfully!")
         return True, markets, orderbooks, None
         
@@ -128,29 +127,9 @@ def test_platform(platform, platform_name: str, num_markets: int = 3):
         return False, [], [], str(e)
 
 
-def test_edge_cases(platform, platform_name: str):
-    """Test edge cases for a platform."""
-    print_separator(f"Edge Case Testing for {platform_name}")
-    
-    try:
-        # Test with 0 markets
-        print("Testing with 0 markets:")
-        empty_markets = platform.find_new_markets(0)
-        print(f"  ✅ Result: {len(empty_markets)} markets (expected: 0)")
-        
-        # Test with empty market list
-        print("\nTesting with empty market ID list:")
-        empty_orderbooks = platform.get_order_books([])
-        print(f"  ✅ Result: {len(empty_orderbooks)} order books (expected: 0)")
-        
-        return True
-        
-    except Exception as e:
-        print(f"  ❌ Edge case test failed: {e}")
-        return False
 
 
-def test_all_platforms():
+def main():
     """Test all platforms and provide a comprehensive report."""
     print("🚀 Platform Reader Test Suite Starting")
     print("This script demonstrates the complete workflow of all platform classes")
@@ -172,8 +151,6 @@ def test_all_platforms():
             'error': error
         }
         
-        if success:
-            test_edge_cases(platform, platform_name)
     
     # Summary Report
     print_separator("FINAL TEST SUMMARY")
@@ -208,76 +185,7 @@ def test_all_platforms():
         return False
 
 
-def main():
-    """Main function - test with original Kalshi focus for compatibility"""
-    print("Platform Reader Demonstration")
-    print("This script demonstrates the complete workflow of the platform classes")
-    
-    # Initialize the Kalshi platform (as in original)
-    platform = KalshiPlatform()
-    
-    # Step 1: Find new markets
-    print_separator("STEP 1: Finding New Markets from Kalshi")
-    num_markets = 3
-    print(f"Requesting {num_markets} new markets from Kalshi API...")
-    
-    market_ids = platform.find_new_markets(num_markets)
-    print(f"Found {len(market_ids)} market IDs:")
-    for i, market_id in enumerate(market_ids, 1):
-        print(f"  {i}. {market_id}")
-    
-    if not market_ids:
-        print("No markets found. This could be due to:")
-        print("  - Network connectivity issues")
-        print("  - Kalshi API changes")
-        print("  - Rate limiting")
-        return
-    
-    # Step 2: Get market details
-    print_separator("STEP 2: Getting Market Details")
-    print(f"Fetching details for {len(market_ids)} markets...")
-    
-    markets = platform.get_markets(market_ids)
-    print(f"Retrieved {len(markets)} market objects:")
-    
-    for i, market in enumerate(markets, 1):
-        print(f"\n  Market {i}:")
-        print(f"    Platform: {market.platform.value}")
-        print(f"    ID: {market.market_id[:20]}...")  # Truncate long IDs
-        print(f"    Name: {market.name}")
-        print(f"    Rules: {market.rules[:100]}...")  # Truncate long rules
-        print(f"    Close Time: {format_timestamp(market.close_timestamp)}")
-    
-    # Step 3: Get order books (limit to first market to avoid rate limiting)
-    print_separator("STEP 3: Getting Order Books")
-    test_market_ids = market_ids[:1]  # Only test first market
-    print(f"Fetching order book for 1 market to avoid rate limiting...")
-    
-    orderbooks = platform.get_order_books(test_market_ids)
-    print(f"Retrieved {len(orderbooks)} order books:")
-    
-    for i, orderbook in enumerate(orderbooks, 1):
-        print(f"\n--- Order Book {i} ---")
-        print_orderbook_data(orderbook)
-    
-    # Summary
-    print_separator("SUMMARY")
-    print(f"Platform Reader demonstration completed:")
-    print(f"  • Found {len(market_ids)} market IDs")
-    print(f"  • Retrieved {len(markets)} market details")
-    print(f"  • Fetched {len(orderbooks)} order books")
-    print(f"  • Platform: {markets[0].platform.value if markets else 'N/A'}")
-    
-    # Test edge cases
-    test_edge_cases(platform, "KalshiPlatform")
-    
-    print("\n" + "="*60)
-    print(" Platform Reader test completed! ")
-    print("="*60)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "all":
-        test_all_platforms()
-    else:
-        main()
+    main()

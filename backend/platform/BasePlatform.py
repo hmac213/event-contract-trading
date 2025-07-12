@@ -1,16 +1,10 @@
 # import abstract class
 from abc import ABC, abstractmethod
-from typing import Any, TYPE_CHECKING
-from enum import Enum
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.models.Market import Market
     from backend.models.Orderbook import Orderbook
-
-class PlatformType(Enum):
-    KALSHI = "KALSHI"
-    POLYMARKET = "POLYMARKET"
-    TEST = "TEST"
     
 class BasePlatform(ABC):
     @abstractmethod

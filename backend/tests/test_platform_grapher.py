@@ -32,7 +32,7 @@ sys.path.insert(0, project_root)
 from backend.platform.KalshiPlatform import KalshiPlatform
 from backend.platform.TestPlatform import TestPlatform
 from backend.platform.PolyMarketPlatform import PolyMarketPlatform
-from backend.platform.BasePlatform import PlatformType
+from backend.models.PlatformType import PlatformType
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 

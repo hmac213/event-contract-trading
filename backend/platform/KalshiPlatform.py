@@ -3,7 +3,8 @@ import time
 from typing import List
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
-from backend.platform.BasePlatform import BasePlatform, PlatformType
+from backend.platform.BasePlatform import BasePlatform
+from backend.models.PlatformType import PlatformType
 import requests
 from dotenv import load_dotenv
 

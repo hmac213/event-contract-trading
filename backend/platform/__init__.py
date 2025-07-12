@@ -7,4 +7,4 @@ This package contains platform-specific implementations for different trading pl
 # Import order is important to avoid circular imports
 # BasePlatform should be imported first since other classes depend on it
 
-__all__ = ['BasePlatform', 'PlatformType', 'KalshiPlatform', 'PolyMarketPlatform', 'TestPlatform']
+__all__ = ['BasePlatform', 'KalshiPlatform', 'PolyMarketPlatform', 'TestPlatform']
