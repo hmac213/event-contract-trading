@@ -3,7 +3,7 @@ requests==2.31.0
 python-dotenv==1.0.0
 
 # PolyMarket integration
-py-clob-client>=1.0.0
+py-clob-client
 py-order-utils>=1.0.0  # indirect dependency for py-clob-client
 
 # Supabase + OpenAI
