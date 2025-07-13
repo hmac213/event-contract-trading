@@ -1,2 +1,4 @@
 
-__all__ = ['Manager']
+
+
+__all__ = ['Manager', 'CrossPlatformArbitrage', 'Similarity']
