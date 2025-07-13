@@ -79,7 +79,6 @@ class Manager():
         # Step 5: Store all orderbooks
         self.db_manager.add_orderbooks(all_orderbooks)
 
-        # Optional: You can still loop through pairs to evaluate arbitrage if needed
 
 
 if __name__ == "__main__":

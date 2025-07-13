@@ -80,32 +80,38 @@ class DBManager():
         for i in range(0, len(new_markets), chunk_size):
             self.supabase.table("markets").insert(new_markets[i:i + chunk_size]).execute()
 
-    def get_markets(self, market_ids: list[str]) -> list[Market]:
+    def get_markets(self, market_ids: list[str], chunk_size: int = 100) -> list[Market]:
         """
-        Returns a list of Market objects for the given market IDs.
+        Returns a list of Market objects for the given market IDs, chunked to avoid URI limits.
         """
         if not market_ids:
             return []
 
-        response = (
-            self.supabase.table("markets")
-            .select("*")
-            .in_("market_id", market_ids)
-            .execute()
-        )
-
         markets = []
-        for row in response.data:
-            market = Market(
-                platform=PlatformType(row["platform"]),
-                market_id=row["market_id"],
-                name=row["name"],
-                rules=row["rules"],
-                close_timestamp=row["close_timestamp"]
+
+        for i in range(0, len(market_ids), chunk_size):
+            chunk = market_ids[i:i + chunk_size]
+
+            response = (
+                self.supabase.table("markets")
+                .select("*")
+                .in_("market_id", chunk)
+                .execute()
             )
-            markets.append(market)
+
+            if response.data:
+                for row in response.data:
+                    market = Market(
+                        platform=PlatformType(row["platform"]),
+                        market_id=row["market_id"],
+                        name=row["name"],
+                        rules=row["rules"],
+                        close_timestamp=row["close_timestamp"]
+                    )
+                    markets.append(market)
 
         return markets
+
 
     def add_orderbooks(self, orderbooks: list[Orderbook]) -> None:
         # Convert Orderbook objects to dictionaries
