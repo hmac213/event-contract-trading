@@ -1,5 +1,4 @@
-from datetime import datetime
-import time
+
 from typing import List
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
@@ -12,6 +11,10 @@ import requests
 from backend.models.PlatformType import PlatformType
 import logging
 import json
+import aiohttp
+import asyncio
+from datetime import datetime
+import time
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
@@ -33,6 +36,23 @@ class PolyMarketPlatform(BasePlatform):
         # for Gamma API access
         self.base_url = "https://gamma-api.polymarket.com"
 
+    async def _fetch_market(self, session, base_url, market_id):
+        url = f"{base_url}/markets?condition_ids={market_id}"
+        async with session.get(url) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+            return market_id, json.loads(data[0]["clobTokenIds"])
+
+    async def _fetch_all_cid_to_tkd(self, base_url, market_ids):
+        cid_to_tkd = {}
+        timeout = aiohttp.ClientTimeout(total=20)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            tasks = [self._fetch_market(session, base_url, market_id) for market_id in market_ids]
+            results = await asyncio.gather(*tasks)
+            for market_id, tkd_list in results:
+                cid_to_tkd[market_id] = tkd_list
+        return cid_to_tkd
+
     def get_order_books(self, market_ids: List[str]) -> List[Orderbook]:
         
         """
@@ -47,31 +67,17 @@ class PolyMarketPlatform(BasePlatform):
 
         market_id_set = set(market_ids)
 
-        offset = 0
-        limit = 500
-        seen_ids = set()
+        
 
         # str -> [str, str]
         cid_to_tkd = {}
 
         tkd_to_order_book = {}
         
+        start_time = datetime.now()
+        cid_to_tkd = asyncio.run(self._fetch_all_cid_to_tkd(self.base_url, market_id_set))
 
-        while len(seen_ids) < len(market_id_set):
-            url = f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit={limit}&offset={offset}"
-            response = requests.get(url)
-            response.raise_for_status()
-
-            markets = response.json()
-            if not markets:
-                break  # no more data
-            for m in markets:
-                cid = m.get("conditionId")
-                if cid in market_id_set:
-                    cid_to_tkd[cid] = json.loads(m["clobTokenIds"])
-                    seen_ids.add(cid)
-            offset += 500
- 
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
         all_tkd = [tkd for tkd_list in cid_to_tkd.values() for tkd in tkd_list]
 
         
@@ -158,7 +164,9 @@ class PolyMarketPlatform(BasePlatform):
         page_offset = 0
         while num_requests < num_markets:
             # https://gamma-api.polymarket.com/markets?order=id&closed=false&active=true&ascending=false
-            response = requests.request("GET", f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit=1000&offset={page_offset}")
+            limit = 500 # max limit per request
+            limit = min(limit, num_markets - num_requests)
+            response = requests.request("GET", f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit=500&offset={page_offset}")
 
             for a_market in response.json():
                 if a_market.get("endDateIso") is not None and a_market["endDateIso"] is not None:
@@ -168,7 +176,7 @@ class PolyMarketPlatform(BasePlatform):
                         num_requests += 1
                         if num_requests >= num_markets:
                             break
-            page_offset += 1000
+            page_offset += 500
         return list(new_markets)
 
     def get_markets(self, market_ids: List[str]) -> List[Market]:
