@@ -11,6 +11,8 @@ import os
 import requests
 from backend.models.PlatformType import PlatformType
 import logging
+import json
+
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
     """
@@ -43,15 +45,60 @@ class PolyMarketPlatform(BasePlatform):
             List of Orderbook objects containing bid/ask data
         """
 
+        market_id_set = set(market_ids)
+
+        offset = 0
+        limit = 1000
+        seen_ids = set()
+
+        # str -> [str, str]
+        cid_to_tkd = {}
+
+        tkd_to_order_book = {}
+        
+
+        while len(seen_ids) < len(market_id_set):
+            url = f"{self.base_url}/markets?order=id&closed=false&active=true&ascending=false&limit={limit}&offset={offset}"
+            response = requests.get(url)
+            response.raise_for_status()
+
+            markets = response.json()
+            if not markets:
+                break  # no more data
+            for m in markets:
+                cid = m.get("conditionId")
+                if cid in market_id_set:
+                    cid_to_tkd[cid] = json.loads(m["clobTokenIds"])
+                    seen_ids.add(cid)
+            offset += 1000
+ 
+        all_tkd = [tkd for tkd_list in cid_to_tkd.values() for tkd in tkd_list]
+
+        
+        def chunk_list(lst, size):
+            for i in range(0, len(lst), size):
+                yield lst[i:i + size]
+
+        CHUNK_SIZE = 50
+        params = [BookParams(token_id=t) for t in all_tkd]
+        temp_tkd_to_orderbook = []
+
+        for chunk in chunk_list(params, CHUNK_SIZE):
+
+            partial_result = self.client.get_order_books(params=chunk)
+            temp_tkd_to_orderbook.extend(partial_result)
+
+        for i, tkd in enumerate(all_tkd):
+            tkd_to_order_book[tkd] = temp_tkd_to_orderbook[i]
         orderbooks = []
         for market_id in market_ids:
-            polymarket_market = self.client.get_market(condition_id=market_id)
-            
-            yes_token = polymarket_market["tokens"][0]["token_id"]
-            #yes_order_book = self.client.get_order_book(token_id=yes_token)
-            no_token = polymarket_market["tokens"][1]["token_id"]
-            #no_order_book = self.client.get_order_book(token_id=no_token)
-            [yes_order_book, no_order_book] = self.client.get_order_books(params=[BookParams(token_id=yes_token), BookParams(token_id=no_token)])
+
+            yes_token = cid_to_tkd[market_id][0]
+            no_token = cid_to_tkd[market_id][1]
+
+            yes_order_book = tkd_to_order_book[yes_token]
+            no_order_book = tkd_to_order_book[no_token]
+
             yes_book = {
                     "bid": [[], []],
                     "ask": [[], []]
@@ -149,7 +196,6 @@ class PolyMarketPlatform(BasePlatform):
             if not markets:
                 break  # no more data
             for m in markets:
-                logging.debug(f"abcdeProcessing market: {m.get('conditionId')}")
                 cid = m.get("conditionId")
                 if cid in market_id_set:
                 

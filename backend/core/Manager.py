@@ -28,6 +28,8 @@ class Manager():
         start_time = datetime.now()
         self.logger.info("Starting Trading Engine Cycle")
         self.update_markets()
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        self.logger.info("Market Update Duration: %d ms", duration_ms)
         self.check_arbitrage()
         self.logger.info("Ending Trading Engine Cycle")
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -62,7 +64,6 @@ class Manager():
 
         # Step 2: Get all Market objects in one DB call
         markets = self.db_manager.get_markets(list(unique_market_ids))
-        market_by_id = {m.market_id: m for m in markets}
 
         # Step 3: Group market IDs by platform for batch orderbook fetching
         market_ids_by_platform = {}
