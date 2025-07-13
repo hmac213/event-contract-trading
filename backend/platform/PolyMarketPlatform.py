@@ -48,7 +48,7 @@ class PolyMarketPlatform(BasePlatform):
         market_id_set = set(market_ids)
 
         offset = 0
-        limit = 1000
+        limit = 500
         seen_ids = set()
 
         # str -> [str, str]
@@ -70,7 +70,7 @@ class PolyMarketPlatform(BasePlatform):
                 if cid in market_id_set:
                     cid_to_tkd[cid] = json.loads(m["clobTokenIds"])
                     seen_ids.add(cid)
-            offset += 1000
+            offset += 500
  
         all_tkd = [tkd for tkd_list in cid_to_tkd.values() for tkd in tkd_list]
 
@@ -182,10 +182,11 @@ class PolyMarketPlatform(BasePlatform):
             List of Market objects with market information
         """
         market_id_set = set(market_ids)
+        print(f"Fetching markets for IDs: {market_id_set}")
         matched_markets = []
 
         offset = 0
-        limit = 1000
+        limit = 500
         seen_ids = set()
         
 
@@ -213,7 +214,6 @@ class PolyMarketPlatform(BasePlatform):
                         close_timestamp=unix_ts
                     ))
                     seen_ids.add(cid)
-            offset += 1000
-
+            offset += 500
         return matched_markets
 

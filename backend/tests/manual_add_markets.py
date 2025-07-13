@@ -1,7 +1,6 @@
 from backend.platform.PolyMarketPlatform import PolyMarketPlatform
 from backend.platform.KalshiPlatform import KalshiPlatform
 from backend.core.CrossPlatformArbitrage import calculate_cross_platform_arbitrage
-from backend.tests.test_depth_chart  import plot_depth_chart
 from backend.db.DBManager import DBManager
 
 
@@ -10,8 +9,8 @@ polymarket = PolyMarketPlatform()
 db_manager = DBManager()
 
 
-kalshi_market_str = "KXLLM1-25JUL31-GOOG"
-polymarket_market_str = "0x310c3d08f015157ec78e04f3f4fefed659b5e2bd88ae80cb38ff27ef970c39bd"
+kalshi_market_str = "KXNEWROLEX-26JAN-EMUS"
+polymarket_market_str = "0x4a51e4c89437c1c792c8fd2bb834e937b5795e2a27de1c1ad0018c99469efc33"
 order_book_kalshi = kalshi.get_order_books([kalshi_market_str])[0]
 order_book_polymarket = polymarket.get_order_books([polymarket_market_str])[0]
 

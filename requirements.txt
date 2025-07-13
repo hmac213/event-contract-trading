@@ -1,19 +1,26 @@
 # Core dependencies for event contract trading platform
-requests>=2.31.0
-python-dotenv>=1.0.0
+requests==2.31.0
+python-dotenv==1.0.0
 
 # PolyMarket integration
 py-clob-client>=1.0.0
+py-order-utils>=1.0.0  # indirect dependency for py-clob-client
+
+# Supabase + OpenAI
+supabase==1.0.3
+gotrue==1.0.2
+openai==1.30.1  # or latest compatible
+
+# Compatibility-pinned dependencies
+httpx==0.25.2
+pydantic==1.10.22
+eth-utils==2.3.2
+eth-account==0.9.0
+eth-keys==0.4.0  # compatible with eth-account <0.10
 
 # Visualization
-matplotlib>=3.7.0
+matplotlib==3.7.0
 
-# Standard library dependencies (included with Python)
-# datetime - built-in
-# time - built-in  
-# typing - built-in
-# abc - built-in
-# enum - built-in
-# os - built-in
-# random - built-in
-# string - built-in
+# If using asyncio, aiohttp, or websockets explicitly
+# aiohttp==3.9.5
+# websockets==12.0
