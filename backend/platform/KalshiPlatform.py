@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import time
 from typing import List
 from backend.models.Market import Market
@@ -7,6 +8,9 @@ from backend.platform.BasePlatform import BasePlatform
 from backend.models.PlatformType import PlatformType
 import requests
 from dotenv import load_dotenv
+import asyncio
+import time
+import httpx
 
 load_dotenv()  
 class KalshiPlatform(BasePlatform):
@@ -23,6 +27,63 @@ class KalshiPlatform(BasePlatform):
         self.session.headers.update({
             "Content-Type": "application/json"
         })
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    async def _get_order_books_async(self, market_ids: List[str], markets: dict) -> List[Orderbook]:
+        async with httpx.AsyncClient() as session:
+            tasks = [
+                self._fetch_orderbook(session, self.base_url, mid, markets)
+                for mid in market_ids
+            ]
+            results = await asyncio.gather(*tasks)
+            return [ob for ob in results if ob is not None]
+
+    async def _fetch_orderbook(self, session, base_url, market_id, markets):
+        try:
+            response = await session.get(f"{base_url}/markets/{market_id}/orderbook")
+            if response.status_code != 200:
+                return None
+
+            data = response.json()["orderbook"]
+            data2 = markets[market_id]
+            highest_no_bid = data2["no_bid"]
+            highest_yes_bid = data2["yes_bid"]
+
+            yes_bids = [[], []]
+            yes_asks = [[], []]
+            no_bids = [[], []]
+            no_asks = [[], []]
+
+            yes = data.get("yes", []) or []
+            no = data.get("no", []) or []
+
+            for a_yes in yes:
+                if a_yes[0] < highest_yes_bid:
+                    yes_bids[0].append(a_yes[0] * 10)
+                    yes_bids[1].append(a_yes[1] * 100)
+
+            for a_no in no:
+                if a_no[0] < highest_no_bid:
+                    no_bids[0].append(a_no[0] * 10)
+                    no_bids[1].append(a_no[1] * 100)
+
+            for i in range(len(yes_bids[0])):
+                no_asks[0].append(1000 - yes_bids[0][i])
+                no_asks[1].append(yes_bids[1][i])
+            for i in range(len(no_bids[0])):
+                yes_asks[0].append(1000 - no_bids[0][i])
+                yes_asks[1].append(no_bids[1][i])
+
+            return Orderbook(
+                market_id=market_id,
+                timestamp=int(time.time() * 1000),
+                yes={"bid": yes_bids, "ask": yes_asks},
+                no={"bid": no_bids, "ask": no_asks}
+            )
+        except Exception as e:
+            print(f"Error processing market {market_id}: {e}")
+            return None
+
 
     def get_order_books(self, market_ids: List[str]) -> List[Orderbook]:
         
@@ -35,54 +96,17 @@ class KalshiPlatform(BasePlatform):
         Returns:
             List of Orderbook objects containing bid/ask data
         """
-        orderbooks = []
 
-        for market_id in market_ids:
-            response = self.session.get(f"{self.base_url}/markets/{market_id}/orderbook")
-            response2 = self.session.get(f"{self.base_url}/markets/{market_id}")
-            if response.status_code == 200 and response2.status_code == 200:
-
-                data = response.json()["orderbook"]
-                data2 = response2.json()["market"]
-                highest_no_bid = data2["no_bid"]
-                highest_yes_bid = data2["yes_bid"]
-
-
-                yes_bids = [[], []]
-                yes_asks = [[], []]
-                no_bids = [[], []]
-                no_asks = [[], []]
-                
-                yes = data["yes"]
-                no = data["no"] 
-                for a_yes in yes:
-                    if a_yes[0] < highest_yes_bid:
-                        yes_bids[0].append(a_yes[0] * 10)
-                        yes_bids[1].append(a_yes[1] * 100)
-                for a_no in no:
-                    if a_no[0] < highest_no_bid:
-                        no_bids[0].append(a_no[0] * 10)
-                        no_bids[1].append(a_no[1] * 100)
-
-                for i in range(len(yes_bids[0])):
-                    no_asks[0].append(1000 - yes_bids[0][i])
-                    no_asks[1].append(yes_bids[1][i])
-                for i in range(len(no_bids[0])):
-                    yes_asks[0].append(1000 - no_bids[0][i])
-                    yes_asks[1].append(no_bids[1][i])
-
-                
-               
-                orderbook = Orderbook(
-                    market_id=market_id,
-                    timestamp=int(time.time() * 1000),
-                    yes={"bid": yes_bids, "ask": yes_asks},
-                    no={"bid": no_bids, "ask": no_asks}
-                )
-
-                orderbooks.append(orderbook)
-
-        return orderbooks
+        markets = {}
+        while len(markets) < len(market_ids):
+            limited_request_ids = market_ids[len(markets):len(markets) + 50]
+            response = self.session.get(f"{self.base_url}/markets?tickers={','.join(limited_request_ids)}")
+            if response.status_code == 200:
+                data = response.json()["markets"]
+                for a_market in data:
+                    markets[a_market['ticker']] = a_market
+    
+        return asyncio.run(self._get_order_books_async(market_ids, markets))
 
     def find_new_markets(self, num_markets: int) -> List[str]:
         """
@@ -114,8 +138,8 @@ class KalshiPlatform(BasePlatform):
             cursor = parsed_response.get('cursor')
 
         return market_ids
+    
 
-       
     def get_markets(self, market_ids: List[str]) -> List[Market]:
 
         """
@@ -131,24 +155,23 @@ class KalshiPlatform(BasePlatform):
             return []
 
         markets = []
-        for market_id in market_ids:
-            response = self.session.get(f"{self.base_url}/markets/{market_id}")
+        while len(markets) < len(market_ids):
+            limited_request_ids = market_ids[len(markets):len(markets) + 50]
+            response = self.session.get(f"{self.base_url}/markets?tickers={','.join(limited_request_ids)}")
             if response.status_code == 200:
-                data = response.json()["market"]
-                close_iso_time = data["close_time"]
-                dt = datetime.strptime(close_iso_time, "%Y-%m-%dT%H:%M:%SZ")
-                unix_ts = int(dt.timestamp())
+                data = response.json()["markets"]
+                for a_market in data:
+                    close_iso_time = a_market["close_time"]
+                    dt = datetime.strptime(close_iso_time, "%Y-%m-%dT%H:%M:%SZ")
+                    unix_ts = int(dt.timestamp())
 
-                market = Market(
-                    platform=PlatformType.KALSHI,
-                    market_id=data['ticker'],
-                    name=data['title'],
-                    rules=data['rules_primary'],
-                    close_timestamp=unix_ts
-                )
-                markets.append(market)
-            else:
-                print(f"Failed to fetch market {market_id}: {response.status_code} - {response.text}")
-
+                    market = Market(
+                        platform=PlatformType.KALSHI,
+                        market_id=a_market['ticker'],
+                        name=a_market['title'],
+                        rules=a_market['rules_primary'],
+                        close_timestamp=unix_ts
+                    )
+                    markets.append(market)
         return markets
 
