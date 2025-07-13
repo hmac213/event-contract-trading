@@ -1,4 +1,4 @@
-from platform.Orderbook import Orderbook
+from backend.models.Orderbook import Orderbook
 from typing import List, Tuple
 import math
 
@@ -23,7 +23,9 @@ def calculate_cross_platform_arbitrage(ob1: Orderbook, ob2: Orderbook, profit_th
         cumulative = []
         total_qty = 0
         total_cost = 0
-        for price, qty in levels:
+        for i in range(len(levels[0])):
+            price = levels[0][i]
+            qty = levels[1][i]
             total_qty += qty
             total_cost += price * qty
             cumulative.append((total_qty, total_cost, price))
