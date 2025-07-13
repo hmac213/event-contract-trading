@@ -1,6 +1,7 @@
 # import abstract class
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+from backend.models.Order import Order
 
 if TYPE_CHECKING:
     from backend.models.Market import Market
@@ -31,7 +32,6 @@ class BasePlatform(ABC):
         pass
 
     @abstractmethod
-
     def get_markets(self, market_ids: list[str]) -> list["Market"]:
         """
         Arguments:
@@ -40,4 +40,12 @@ class BasePlatform(ABC):
             returns:
                 - Market object for the given market ID.
         """
+        pass
+
+    @abstractmethod
+    def place_order(self, order: Order) -> dict:
+        pass
+
+    @abstractmethod
+    def cancel_order(self, order: Order):
         pass
