@@ -98,42 +98,44 @@ class PolyMarketPlatform(BasePlatform):
 
             yes_order_book = tkd_to_order_book[yes_token]
             no_order_book = tkd_to_order_book[no_token]
-
-            yes_book = {
-                    "bid": [[], []],
-                    "ask": [[], []]
-                }
-
+            yes_bid = []
+            yes_ask = []
+            
             # get yes bid
             for an_order_summary in yes_order_book.bids:
-                yes_book["bid"][0].append(int(float(an_order_summary.price) * 1000))  # Convert to integer cents
-                yes_book["bid"][1].append(int(float(an_order_summary.size) * 100))
+                yes_bid.append([int(float(an_order_summary.price) * 1000), int(float(an_order_summary.size) * 100)])
 
             # get yes ask
             for an_order_summary in yes_order_book.asks:
-                yes_book["ask"][0].append(int(float(an_order_summary.price) * 1000))  # Convert to integer cents
-                yes_book["ask"][1].append(int(float(an_order_summary.size) * 100))
+                yes_ask.append([int(float(an_order_summary.price) * 1000), int(float(an_order_summary.size) * 100)])
 
-            no_book = {
-                "bid": [[], []],
-                "ask": [[], []]
-            }
             
+            no_bid = []
+            no_ask = []
             # get no bid
             for an_order_summary in no_order_book.bids:
-                no_book["bid"][0].append(int(float(an_order_summary.price) * 1000))  # Convert to integer cents
-                no_book["bid"][1].append(int(float(an_order_summary.size) * 100))
+                no_bid.append([int(float(an_order_summary.price) * 1000), int(float(an_order_summary.size) * 100)])
 
             # get no ask
             for an_order_summary in no_order_book.asks:
-                no_book["ask"][0].append(int(float(an_order_summary.price) * 1000))  # Convert to integer cents
-                no_book["ask"][1].append(int(float(an_order_summary.size) * 100))
+                no_ask.append([int(float(an_order_summary.price) * 1000), int(float(an_order_summary.size) * 100)])
+            
+            yes_bid.sort(key=lambda x: x[0])
+            yes_ask.sort(key=lambda x: x[0])
+            no_bid.sort(key=lambda x: x[0])
+            no_ask.sort(key=lambda x: x[0])
 
             orderbook = Orderbook(
                 market_id=market_id,
                 timestamp=int(time.time() * 1000),
-                yes=yes_book,
-                no=no_book  
+                yes={
+                "bid": yes_bid,
+                "ask": yes_ask
+                },
+                no={
+                    "bid": no_bid,
+                    "ask": no_ask
+                }
             )
 
             orderbooks.append(orderbook)

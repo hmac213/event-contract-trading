@@ -7,6 +7,8 @@ from random import randint, random
 import time
 import string
 import random
+from random import randint
+
 
 class TestPlatform(BasePlatform):
     def get_order_books(self, market_ids: list[str]) -> list[Orderbook]:
@@ -18,14 +20,23 @@ class TestPlatform(BasePlatform):
         for market_id in market_ids:
             # for each market_id, create a dummy order book
             
-            # price, quantity pairs for yes and no
-            yes_bids = [sorted(randint(1, 500) for _ in range(100)), [randint(1, 20000) for _ in range(100)]]
-            # no ask is the same as yes bids, but each of the price is 1000 - price
-            no_asks = [[1000 - price for price in yes_bids[0]], [a_quantity for a_quantity in yes_bids[1]]]
 
+            # Generate yes bids as [price, quantity] pairs
+            yes_bid_prices = sorted(randint(1, 500) for _ in range(100))
+            yes_bid_quantities = [randint(1, 20000) for _ in range(100)]
+            yes_bids = [[price, quantity] for price, quantity in zip(yes_bid_prices, yes_bid_quantities)]
 
-            no_bids = [sorted(randint(500, 1000) for _ in range(100)), [randint(1, 20000) for _ in range(100)]]
-            yes_asks = [[1000 - price for price in no_bids[0]], [a_quantity for a_quantity in no_bids[1]]]
+            # Generate no asks as [1000 - price, quantity] pairs (mirrored from yes bids)
+            no_asks = [[1000 - price, quantity] for price, quantity in zip(yes_bid_prices, yes_bid_quantities)]
+
+            # Generate no bids as [price, quantity] pairs
+            no_bid_prices = sorted(randint(500, 1000) for _ in range(100))
+            no_bid_quantities = [randint(1, 20000) for _ in range(100)]
+            no_bids = [[price, quantity] for price, quantity in zip(no_bid_prices, no_bid_quantities)]
+
+            # Generate yes asks as [1000 - price, quantity] pairs (mirrored from no bids)
+            yes_asks = [[1000 - price, quantity] for price, quantity in zip(no_bid_prices, no_bid_quantities)]
+
             orderbook = Orderbook(
                 market_id=market_id,
                 timestamp= int(time.time() * 1000),

@@ -17,4 +17,4 @@ Usage:
     python -m backend.tests.test_platform_grapher test  # Save to file instead of showing
 """
 
-__all__ = ['test_platform_reader', 'test_platform_grapher']
+__all__ = ['test_platform_reader', 'test_platform_grapher', 'test_platform_order_book']

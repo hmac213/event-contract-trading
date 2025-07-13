@@ -5,6 +5,9 @@ python-dotenv>=1.0.0
 # PolyMarket integration
 py-clob-client>=1.0.0
 
+# Visualization
+matplotlib>=3.7.0
+
 # Standard library dependencies (included with Python)
 # datetime - built-in
 # time - built-in  

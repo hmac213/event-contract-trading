@@ -49,31 +49,31 @@ class KalshiPlatform(BasePlatform):
             highest_no_bid = data2["no_bid"]
             highest_yes_bid = data2["yes_bid"]
 
-            yes_bids = [[], []]
-            yes_asks = [[], []]
-            no_bids = [[], []]
-            no_asks = [[], []]
+            yes_bids = []
+            yes_asks = []
+            no_bids = []
+            no_asks = []
 
-            yes = data.get("yes", []) or []
-            no = data.get("no", []) or []
-
+            yes = data.get("yes") or []
+            no = data.get("no") or []
             for a_yes in yes:
-                if a_yes[0] < highest_yes_bid:
-                    yes_bids[0].append(a_yes[0] * 10)
-                    yes_bids[1].append(a_yes[1] * 100)
+                if a_yes[0] <= highest_yes_bid:
+                    yes_bids.append([a_yes[0] * 10, a_yes[1] * 100])
 
             for a_no in no:
-                if a_no[0] < highest_no_bid:
-                    no_bids[0].append(a_no[0] * 10)
-                    no_bids[1].append(a_no[1] * 100)
+                if a_no[0] <= highest_no_bid:
+                    no_bids.append([a_no[0] * 10, a_no[1] * 100])
 
-            for i in range(len(yes_bids[0])):
-                no_asks[0].append(1000 - yes_bids[0][i])
-                no_asks[1].append(yes_bids[1][i])
-            for i in range(len(no_bids[0])):
-                yes_asks[0].append(1000 - no_bids[0][i])
-                yes_asks[1].append(no_bids[1][i])
+            for i in range(len(yes_bids)):
+                no_asks.append([1000 - yes_bids[i][0], yes_bids[i][1]])
+            for i in range(len(no_bids)):
+                yes_asks.append([1000 - no_bids[i][0], no_bids[i][1]])
 
+
+            yes_bids.sort(key=lambda x: x[0])
+            yes_asks.sort(key=lambda x: x[0])
+            no_bids.sort(key=lambda x: x[0])
+            no_asks.sort(key=lambda x: x[0])
             return Orderbook(
                 market_id=market_id,
                 timestamp=int(time.time() * 1000),

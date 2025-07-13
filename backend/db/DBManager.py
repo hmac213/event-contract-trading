@@ -4,6 +4,9 @@ from backend.models.Orderbook import Orderbook
 from supabase import create_client
 import os
 import math
+import logging
+from postgrest.exceptions import APIError
+
 class DBManager():
     def __init__(self):
         self.supabase_url = os.getenv("SUPABASE_URL")
@@ -11,6 +14,7 @@ class DBManager():
         self.supabase = create_client(self.supabase_url, self.supabase_key)
 
 
+   
     def add_market_pairs(self, market_pairs: list[list[Market]]) -> None:
         sql_pairs = []
         for pair in market_pairs:
@@ -26,8 +30,17 @@ class DBManager():
             else:
                 sql_pairs.append({"market_id_1": id2, "market_id_2": id1})
 
-        if sql_pairs:
+        if not sql_pairs:
+            return
+
+        try:
             self.supabase.table("market_pairs").insert(sql_pairs).execute()
+        except APIError as e:
+            if e.code == '23505':  # Unique constraint violation
+                logging.debug(f"Duplicate market pair insertion ignored: {e}")
+            else:
+                logging.debug(f"Failed to insert market pairs: {e}")
+
 
     def get_all_market_pairs(self) -> list[list[str]]:
         """

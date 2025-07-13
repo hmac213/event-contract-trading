@@ -29,4 +29,4 @@ class Similarity:
             pairings.append([group1[i], group2[i]])
 
     
-        return pairings
+        return []

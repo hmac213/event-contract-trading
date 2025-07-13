@@ -5,7 +5,7 @@ from backend.platform.PolyMarketPlatform import PolyMarketPlatform
 from backend.db.DBManager import DBManager
 import logging
 from datetime import datetime
-
+from backend.core.CrossPlatformArbitrage import calculate_cross_platform_arbitrage
 class Manager():
 
     def __init__(self, verbose: bool = False):
@@ -72,13 +72,24 @@ class Manager():
 
         # Step 4: Fetch all orderbooks in bulk per platform
         all_orderbooks = []
+        
         for platform, ids in market_ids_by_platform.items():
             orderbooks = self.platforms[platform].get_order_books(ids)
             all_orderbooks.extend(orderbooks)
 
+        ids_to_orderbook = {order_book.market_id: order_book for order_book in all_orderbooks}
         # Step 5: Store all orderbooks
         self.db_manager.add_orderbooks(all_orderbooks)
-
+        # Step 6: Calculate arbitrage opportunities
+        for pair in market_pairs:
+            results = calculate_cross_platform_arbitrage(ids_to_orderbook[pair[0]], ids_to_orderbook[pair[1]], 0.01, 0.0025)
+            logging.info(
+                "Cross Platform Arbitrage Opportunities: \n %s and %s:\n"
+                "  Market 1 - YES: %s, NO: %s\n"
+                "  Market 2 - YES: %s, NO: %s",
+                pair[0], pair[1],
+                results[0], results[1], results[3], results[2]
+            )
 
 
 if __name__ == "__main__":
