@@ -292,6 +292,11 @@ class KalshiPlatform(BasePlatform):
             elif order.action == 'sell':
                 # For market sells, no price information is needed, so we do nothing.
                 pass
+        
+        if order.time_in_force == 'IOC':
+            data['expiration_ts'] = 0
+        elif order.time_in_force == 'FOK':
+            raise ValueError("Kalshi does not support 'FOK' time in force directly. Use 'IOC' or a market order.")
 
         try:
             response = self.session.post(f"{self.base_url}/portfolio/orders", json=data)

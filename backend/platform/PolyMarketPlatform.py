@@ -1,10 +1,10 @@
-
 from typing import List
 from backend.models.Market import Market
 from backend.models.Orderbook import Orderbook
 from backend.platform.BasePlatform import BasePlatform
+from backend.models.Order import Order
 from py_clob_client.client import ClobClient 
-from py_clob_client.clob_types import BookParams
+from py_clob_client.clob_types import BookParams, OrderArgs, OrderType
 from dotenv import load_dotenv
 import os
 import requests
@@ -15,6 +15,7 @@ import aiohttp
 import asyncio
 from datetime import datetime
 import time
+from py_clob_client.order_builder.constants import BUY, SELL
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
@@ -35,6 +36,7 @@ class PolyMarketPlatform(BasePlatform):
 
         # for Gamma API access
         self.base_url = "https://gamma-api.polymarket.com"
+        self.client.set_api_creds(self.client.create_or_derive_api_creds())
 
     async def _fetch_market(self, session, base_url, market_id):
         url = f"{base_url}/markets?condition_ids={market_id}"
@@ -225,3 +227,58 @@ class PolyMarketPlatform(BasePlatform):
             offset += 500
         return matched_markets
 
+    def place_order(self, order: Order) -> dict:
+        order_price = None
+
+        if order.order_type == 'limit':
+            order_price = order.price / 100  # Convert cents to dollars
+        elif order.order_type == 'market':
+            if order.action == 'buy':
+                order_price = order.max_price / 100  # Convert cents to dollars
+            else: # Market Sell
+                order_price = 0.01 # Set aggressive floor price to simulate market sell
+
+        if order_price is None:
+            raise ValueError("Could not determine price for PolyMarket order.")
+
+        token_id = self._get_token_id(order.market_id, order.side)
+        
+        order_action = BUY if order.action.lower() == 'buy' else SELL
+
+        order_args = OrderArgs(
+            price=order_price,
+            size=order.size,
+            side=order_action,
+            token_id=token_id
+        )
+        
+        # Map our internal time_in_force string to the client's OrderType enum
+        order_type_map = {
+            'GTC': OrderType.GTC,
+            'FOK': OrderType.FOK,
+            'IOC': OrderType.IOC
+        }
+        clob_order_type = order_type_map.get(order.time_in_force)
+        if clob_order_type is None:
+            raise ValueError(f"Unsupported time_in_force for PolyMarket: {order.time_in_force}")
+
+        # Use the two-step process to include the order type
+        signed_order = self.client.create_order(order_args)
+        response = self.client.post_order(signed_order, clob_order_type)
+        
+        order.id = response["orderID"]
+        return response
+
+    def cancel_order(self, order: Order):
+        if not order.id:
+            raise ValueError("Order ID is not set. Cannot cancel order.")
+        return self.client.cancel(order.id)
+
+    def _get_token_id(self, market_id: str, side: str) -> str:
+        cid_to_tkd = asyncio.run(self._fetch_all_cid_to_tkd(self.base_url, [market_id]))
+        if side.lower() == 'yes':
+            return cid_to_tkd[market_id][0]
+        elif side.lower() == 'no':
+            return cid_to_tkd[market_id][1]
+        else:
+            raise ValueError(f"Invalid side: {side}")

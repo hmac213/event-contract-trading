@@ -22,7 +22,8 @@ def place_test_order():
             market_id="OAIAGI-25",
             side="yes",
             size=1,
-            price=1  # A very low price in cents to ensure it doesn't fill.
+            price=1,  # A very low price in cents to ensure it doesn't fill.
+            time_in_force='GTC'
         )
         
         print(f"Placing order: {test_order.__dict__}")

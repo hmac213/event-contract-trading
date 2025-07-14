@@ -8,7 +8,7 @@ import time
 import string
 import random
 from random import randint
-
+from backend.models.Order import Order
 
 class TestPlatform(BasePlatform):
     def get_order_books(self, market_ids: list[str]) -> list[Orderbook]:
@@ -68,3 +68,9 @@ class TestPlatform(BasePlatform):
             rules='Test Rules regarding ' + market_id,
             close_timestamp=int(time.time() * 1000)
         ) for market_id in market_ids]
+    
+    def place_order(self, order: Order):
+        pass
+
+    def cancel_order(self, order: Order):
+        pass
