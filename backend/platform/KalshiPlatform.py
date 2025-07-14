@@ -90,6 +90,7 @@ class KalshiHttpxAuth(httpx.Auth):
             r.headers['Content-Type'] = 'application/json'
 
         yield r
+        
 class KalshiPlatform(BasePlatform):
     """
     Kalshi Platform implementation that interfaces with the Kalshi API.

@@ -6,6 +6,7 @@ from backend.db.DBManager import DBManager
 import logging
 from datetime import datetime
 from backend.core.CrossPlatformArbitrage import calculate_cross_platform_arbitrage
+from backend.core.ExecuteArbitrage import ExecuteArbitrage
 import threading
 import time
 from datetime import datetime
@@ -100,6 +101,7 @@ class Manager():
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             logging.info(f"Fetched {len(orderbooks)} order books for platform {platform} in {duration_ms} ms")
 
+        ids_to_market = {market.market_id: market for market in markets}
         ids_to_orderbook = {order_book.market_id: order_book for order_book in all_orderbooks}
         # Step 5: Store all orderbooks
         self.db_manager.add_orderbooks(all_orderbooks)
@@ -107,16 +109,25 @@ class Manager():
         start_time = datetime.now()
 
         for pair in market_pairs:
-            results = calculate_cross_platform_arbitrage(ids_to_orderbook[pair[0]], ids_to_orderbook[pair[1]], 0.01, 0.0025)
-            logging.info(
-                "Cross Platform Arbitrage Opportunities: \n %s and %s:\n"
-                "  Market 1 - YES: %s, NO: %s\n"
-                "  Market 2 - YES: %s, NO: %s",
-                pair[0], pair[1],
-                results[0], results[1], results[3], results[2]
-            )
-        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            ob1 = ids_to_orderbook.get(pair[0])
+            ob2 = ids_to_orderbook.get(pair[1])
+            if not ob1 or not ob2:
+                self.logger.warning(f"Order book missing for market pair: {pair[0]}, {pair[1]}")
+                continue
+            
+            opportunity = calculate_cross_platform_arbitrage(ob1, ob2)
+            if opportunity:
+                self.logger.info(f"Arbitrage opportunity found for pair {pair[0]} and {pair[1]}: {opportunity}")
+                market1 = ids_to_market[pair[0]]
+                market2 = ids_to_market[pair[1]]
+                
+                platform1_obj = self.platforms[market1.platform]
+                platform2_obj = self.platforms[market2.platform]
+                
+                ExecuteArbitrage.place_arbitrage_orders(platform1_obj, platform2_obj, opportunity)
 
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        self.logger.info("Finished checking all pairs in %d ms", duration_ms)
 
 if __name__ == "__main__":
     manager = Manager(verbose=False)

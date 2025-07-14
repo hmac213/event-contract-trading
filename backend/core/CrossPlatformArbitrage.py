@@ -1,16 +1,24 @@
 from backend.models.Orderbook import Orderbook
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict, Any
 import math
 
 
-def calculate_cross_platform_arbitrage(ob1: Orderbook, ob2: Orderbook, profit_threshold: float, expected_slippage: float):
+def calculate_cross_platform_arbitrage(
+    ob1: Orderbook,
+    ob2: Orderbook,
+    profit_threshold: Optional[float] = 0.05,
+    expected_slippage: Optional[float] = 0.01,
+    max_cost: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
     """
     Arguments:
-        orderbook: Orderbook -> Orderbook object for desired market (prices in tenths of cents)
+        ob1: Orderbook -> Orderbook for the first platform
+        ob2: Orderbook -> Orderbook for the second platform
         profit_threshold: float -> Minimum profit threshold for arbitrage opportunity
         expected_slippage: float -> Expected slippage for arbitrage opportunity
+        max_cost: int -> Maximum cost willing to incur across both markets
     Returns:
-        number to buy at each: List[int] -> number to buy of each contract
+        The best arbitrage opportunity as a dictionary, or None if no opportunity is found.
     """
 
     # IMPORTANT: ASSUMES MANUAL NON-DECREASING ORDERBOOKS
@@ -42,10 +50,10 @@ def calculate_cross_platform_arbitrage(ob1: Orderbook, ob2: Orderbook, profit_th
                 return c - cost_dif
         return float("inf")
             
-    def max_shares(curve1: List[Tuple[int, int, int]], curve2: List[Tuple[int, int, int]]) -> int:
+    def get_arbitrage_details(curve1: List[Tuple[int, int, int]], curve2: List[Tuple[int, int, int]]) -> Tuple[int, int]:
         lo = 1
         hi = min(curve1[-1][0], curve2[-1][0])
-        best = 0
+        best_profit_shares = 0
 
         while lo <= hi:
             mid = (hi + lo) // 2
@@ -55,15 +63,48 @@ def calculate_cross_platform_arbitrage(ob1: Orderbook, ob2: Orderbook, profit_th
             revenue = 1000 * mid
 
             if revenue >= required_revenue:
-                best = mid
+                best_profit_shares = mid
                 lo = mid + 1
             else:
                 hi = mid - 1
+        
+        best_cost_shares = float('inf')
+        if max_cost is not None:
+            lo, hi, best_cost_shares = 1, min(curve1[-1][0], curve2[-1][0]), 0
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                if cost_of_shares(mid, curve1) + cost_of_shares(mid, curve2) <= max_cost:
+                    best_cost_shares = mid
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
 
-        return best
+        final_shares = min(best_profit_shares, best_cost_shares)
+        total_cost = cost_of_shares(final_shares, curve1) + cost_of_shares(final_shares, curve2) if final_shares > 0 else 0
+        return final_shares, total_cost
     
-    size1 = max_shares(curve_y1, curve_n2)
-    size2 = max_shares(curve_y2, curve_n1)
+    shares1, cost1 = get_arbitrage_details(curve_y1, curve_n2)
+    shares2, cost2 = get_arbitrage_details(curve_y2, curve_n1)
 
-    # [yes1, no1, yes2, no2] -> take either (0, 2) or (1, 3)
-    return [size1, size2, size1, size2]
+    opp1 = None
+    if shares1 > 0:
+        opp1 = {
+            "type": "yes1_no2",
+            "shares": shares1,
+            "total_cost": cost1,
+            "cost_per_share": cost1 / shares1,
+        }
+
+    opp2 = None
+    if shares2 > 0:
+        opp2 = {
+            "type": "yes2_no1",
+            "shares": shares2,
+            "total_cost": cost2,
+            "cost_per_share": cost2 / shares2,
+        }
+
+    if opp1 and opp2:
+        return opp1 if opp1["cost_per_share"] <= opp2["cost_per_share"] else opp2
+
+    return opp1 or opp2
