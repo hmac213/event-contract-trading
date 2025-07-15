@@ -3,10 +3,13 @@
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
 
 Check it out:  
-[Looker Studio Dashboard](https://lookerstudio.google.com/reporting/c930c1db-f81e-4ebb-a219-4e746a6c4e0b)  
 [Live Project Site](https://harris-song.github.io/events-contract-trading)
 
 ---
+
+### Introduction
+
+Interface for pulling Polymarket and Kalshi data, continuous updates fro
 
 ### Setup
 
