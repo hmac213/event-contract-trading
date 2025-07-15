@@ -1,5 +1,6 @@
 from typing import Optional, Self
 import uuid
+from backend.models.OrderStatus import OrderStatus
 
 class Order:
     def __init__(
@@ -14,6 +15,9 @@ class Order:
         time_in_force: Optional[str] = 'GTC',
         id: Optional[str] = None,
         client_order_id: Optional[str] = None,
+        status: Optional[OrderStatus] = OrderStatus.PENDING,
+        order_id: Optional[str] = None, # platform specific order id
+        fill_size: Optional[int] = 0,
     ):
         self.market_id = market_id
         self.side = side
@@ -25,6 +29,9 @@ class Order:
         self.time_in_force = time_in_force # GTC, IOC, FOK
         self.id = id
         self.client_order_id = client_order_id if client_order_id else str(uuid.uuid4())
+        self.status = status
+        self.order_id = order_id
+        self.fill_size = fill_size
 
     @classmethod
     def create_limit_buy_order(

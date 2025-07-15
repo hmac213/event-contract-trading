@@ -49,3 +49,7 @@ class BasePlatform(ABC):
     @abstractmethod
     def cancel_order(self, order: Order):
         pass
+
+    @abstractmethod
+    def get_order_status(self, order: Order) -> None:
+        pass
