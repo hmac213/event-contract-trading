@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.backends import default_backend
 from requests.auth import AuthBase
 from urllib.parse import urlparse
+from backend.models.OrderStatus import OrderStatus
 
 load_dotenv()  
 
@@ -266,61 +267,82 @@ class KalshiPlatform(BasePlatform):
                     )
                     markets.append(market)
         return markets
-    
-    def place_order(self, order: Order) -> dict:
+
+    def place_order(self, order: Order) -> None:
+        """
+        Place an order on the Kalshi platform.
+        """
+        response = self.session.post(
+            f"{self.base_url}/portfolio/orders",
+            json={
+                "ticker": order.market_id,
+                "action": order.action,
+                "type": order.order_type,
+                "count": order.size,
+                "yes_price": order.price,
+                "buy_max_cost": order.max_price,
+                "side": order.side,
+                "tif": order.time_in_force,
+                "client_order_id": order.client_order_id,
+            }
+        )
+
+        if response.status_code == 201:
+            response_json = response.json()
+            order_data = response_json.get("order", {})
+            order.order_id = order_data.get("order_id")
+            order.status = OrderStatus.OPEN
+            logging.info(f"Order placed successfully: {order.order_id}")
+        else:
+            order.status = OrderStatus.FAILED
+            logging.error(f"Failed to place order: {response.status_code} - {response.text}")
+
+    def cancel_order(self, order: Order) -> None:
+        """
+        Cancel a specific order on the Kalshi platform.
+        """
+        if not order.order_id:
+            logging.error("Cannot cancel Kalshi order: order_id is not set.")
+            return
+
+        # Per Kalshi docs, this reduces the resting contracts to zero.
+        response = self.session.delete(f"{self.base_url}/portfolio/orders/{order.order_id}")
+
+        if response.status_code == 200:
+            logging.info(f"Order {order.order_id} cancelled successfully on Kalshi.")
+            order.status = OrderStatus.CANCELED
+        else:
+            logging.error(f"Failed to cancel Kalshi order {order.order_id}: {response.status_code} - {response.text}")
+
+    def get_order_status(self, order: Order) -> None:
+        """
+        Get the status of a specific order from the Kalshi platform and update the order object.
+        """
+        if not order.order_id:
+            logging.error("Cannot get order status: order_id is not set.")
+            order.status = OrderStatus.FAILED
+            return
+
+        response = self.session.get(f"{self.base_url}/portfolio/orders/{order.order_id}")
+
+        if response.status_code != 200:
+            logging.error(f"Failed to get order status for {order.order_id}: {response.status_code} - {response.text}")
+            # Decide if status should be set to FAILED or left as is
+            return
+
+        order_data = response.json().get("order", {})
         
-        data = {
-            "ticker": order.market_id,
-            "action": order.action,
-            "type": order.order_type,
-            "side": order.side,
-            "count": order.size,
-            "client_order_id": order.client_order_id
+        kalshi_status = order_data.get("status")
+        
+        status_map = {
+            "resting": OrderStatus.OPEN,
+            "executed": OrderStatus.EXECUTED,
+            "canceled": OrderStatus.CANCELED,
+            "partially_filled": OrderStatus.PARTIALLY_FILLED,
         }
-
-        if order.order_type == 'limit':
-            if order.price is None:
-                raise ValueError("Price must be provided for limit orders.")
-            if order.side == 'yes':
-                data["yes_price"] = order.price
-            else:
-                data["no_price"] = order.price
-        elif order.order_type == 'market':
-            if order.action == 'buy':
-                if order.max_price is None:
-                    raise ValueError("A maximum cost (max_price) must be provided for market buy orders.")
-                data["buy_max_cost"] = order.max_price * order.size
-            elif order.action == 'sell':
-                # For market sells, no price information is needed, so we do nothing.
-                pass
         
-        if order.time_in_force == 'IOC':
-            data['expiration_ts'] = 0
-        elif order.time_in_force == 'FOK':
-            raise ValueError("Kalshi does not support 'FOK' time in force directly. Use 'IOC' or a market order.")
+        order.status = status_map.get(kalshi_status, order.status)
+        order.fill_size = order_data.get("fillsTotalCount", order.fill_size)
 
-        try:
-            response = self.session.post(f"{self.base_url}/portfolio/orders", json=data)
-            response.raise_for_status()
-            if response.status_code == 201:
-                order_data = response.json()
-                order.id = order_data['order']['order_id']
-                return order_data
-        except requests.exceptions.HTTPError as err:
-            print(f"Error placing order. Response from server: {err.response.text}")
-            raise err
-
-
-    def cancel_order(self, order: Order):
-        if not order.id:
-            raise ValueError("Order ID is not set. Cannot cancel order.")
+        logging.info(f"Updated order {order.order_id} status to {order.status.value}")
         
-        try:
-            response = self.session.delete(f"{self.base_url}/portfolio/orders/{order.id}")
-            response.raise_for_status()
-            if response.status_code == 200:
-                return response.json()
-        except requests.exceptions.HTTPError as err:
-            print(f"Error cancelling order. Response from server: {err.response.text}")
-            raise err
-

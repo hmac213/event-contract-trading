@@ -16,6 +16,7 @@ import asyncio
 from datetime import datetime
 import time
 from py_clob_client.order_builder.constants import BUY, SELL
+from backend.models.OrderStatus import OrderStatus
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
@@ -227,7 +228,7 @@ class PolyMarketPlatform(BasePlatform):
             offset += 500
         return matched_markets
 
-    def place_order(self, order: Order) -> dict:
+    def place_order(self, order: Order) -> None:
         order_price = None
 
         if order.order_type == 'limit':
@@ -249,30 +250,64 @@ class PolyMarketPlatform(BasePlatform):
             price=order_price,
             size=order.size,
             side=order_action,
-            token_id=token_id
+            token_id=token_id,
         )
-        
-        # Map our internal time_in_force string to the client's OrderType enum
+
         order_type_map = {
             'GTC': OrderType.GTC,
             'FOK': OrderType.FOK,
-            'IOC': OrderType.IOC
+            'IOC': OrderType.FOK  # Map IOC to FOK for PolyMarket
         }
         clob_order_type = order_type_map.get(order.time_in_force)
         if clob_order_type is None:
             raise ValueError(f"Unsupported time_in_force for PolyMarket: {order.time_in_force}")
 
-        # Use the two-step process to include the order type
-        signed_order = self.client.create_order(order_args)
-        response = self.client.post_order(signed_order, clob_order_type)
-        
-        order.id = response["orderID"]
-        return response
+        try:
+            signed_order = self.client.create_order(order_args)
+            order_receipt = self.client.post_order(signed_order, clob_order_type)
+            order.order_id = order_receipt["order"]["id"]
+            order.status = OrderStatus.OPEN
+            logging.info(f"PolyMarket order placed successfully: {order.order_id}")
+        except Exception as e:
+            order.status = OrderStatus.FAILED
+            logging.error(f"Failed to place PolyMarket order: {e}")
 
     def cancel_order(self, order: Order):
         if not order.id:
             raise ValueError("Order ID is not set. Cannot cancel order.")
         return self.client.cancel(order.id)
+
+    def get_order_status(self, order: Order) -> None:
+        """
+        Get the status of a specific order from the PolyMarket platform and update the order object.
+        """
+        if not order.order_id:
+            logging.error("Cannot get PolyMarket order status: order_id is not set.")
+            order.status = OrderStatus.FAILED
+            return
+
+        try:
+            order_data = self.client.get_order(order.order_id)
+            
+            polymarket_status = order_data.get("status")
+            
+            # Note: The py_clob_client documentation does not specify the exact status strings.
+            # These are based on common trading platform terminology.
+            status_map = {
+                "open": OrderStatus.OPEN,
+                "filled": OrderStatus.EXECUTED,
+                "cancelled": OrderStatus.CANCELED,
+                "partially_filled": OrderStatus.PARTIALLY_FILLED,
+            }
+            
+            order.status = status_map.get(polymarket_status, order.status)
+            order.fill_size = int(float(order_data.get("size_matched", 0)) * 100) # Assuming size_matched is a float string
+            
+            logging.info(f"Updated PolyMarket order {order.order_id} status to {order.status.value}")
+
+        except Exception as e:
+            logging.error(f"Failed to get PolyMarket order status for {order.order_id}: {e}")
+            # Decide if status should be set to FAILED or left as is
 
     def _get_token_id(self, market_id: str, side: str) -> str:
         cid_to_tkd = asyncio.run(self._fetch_all_cid_to_tkd(self.base_url, [market_id]))
