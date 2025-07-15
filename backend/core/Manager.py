@@ -124,7 +124,7 @@ class Manager():
                 platform1_obj = self.platforms[market1.platform]
                 platform2_obj = self.platforms[market2.platform]
                 
-                ExecuteArbitrage.place_arbitrage_orders(platform1_obj, platform2_obj, opportunity)
+                ExecuteArbitrage.place_arbitrage_orders(market1, market2, platform1_obj, platform2_obj, opportunity)
 
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
         self.logger.info("Finished checking all pairs in %d ms", duration_ms)
