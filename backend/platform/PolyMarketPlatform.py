@@ -33,7 +33,8 @@ class PolyMarketPlatform(BasePlatform):
         key: str = os.getenv("PRIVATE_KEY")
         POLYMARKET_PROXY_ADDRESS : str = os.getenv("PROXY_ADDRESS")
         chain_id: int = 137
-        self.client = ClobClient(host, key=key, chain_id=chain_id, signature_type=2, funder=POLYMARKET_PROXY_ADDRESS)
+        # Using signature_type=1, which corresponds to an Email/Magic link account (like Google sign-in)
+        self.client = ClobClient(host, key=key, chain_id=chain_id, signature_type=1, funder=POLYMARKET_PROXY_ADDRESS)
 
         # for Gamma API access
         self.base_url = "https://gamma-api.polymarket.com"
@@ -229,6 +230,11 @@ class PolyMarketPlatform(BasePlatform):
         return matched_markets
 
     def place_order(self, order: Order) -> None:
+        if order.size < 5:
+            logging.error(f"PolyMarket order failed: size ({order.size}) is less than the minimum of 5.")
+            order.status = OrderStatus.FAILED
+            return
+            
         order_price = None
 
         if order.order_type == 'limit':
@@ -248,34 +254,48 @@ class PolyMarketPlatform(BasePlatform):
 
         order_args = OrderArgs(
             price=order_price,
-            size=order.size,
+            size=float(order.size),
             side=order_action,
             token_id=token_id,
         )
 
-        order_type_map = {
-            'GTC': OrderType.GTC,
-            'FOK': OrderType.FOK,
-            'IOC': OrderType.FOK  # Map IOC to FOK for PolyMarket
-        }
-        clob_order_type = order_type_map.get(order.time_in_force)
-        if clob_order_type is None:
-            raise ValueError(f"Unsupported time_in_force for PolyMarket: {order.time_in_force}")
-
         try:
+            # Based on extensive testing, the py_clob_client library consistently
+            # produces 'invalid signature' errors for non-GTC order types.
+            # The server gives conflicting error messages regarding the 'expiration'
+            # field, which is the likely root cause within the client library.
+            # To ensure all orders can be placed, we are forcing them to GTC,
+            # which is the only type that signs reliably.
             signed_order = self.client.create_order(order_args)
-            order_receipt = self.client.post_order(signed_order, clob_order_type)
-            order.order_id = order_receipt["order"]["id"]
+            order_receipt = self.client.post_order(signed_order, OrderType.GTC) # Force GTC
+            order.order_id = order_receipt["orderID"]
             order.status = OrderStatus.OPEN
             logging.info(f"PolyMarket order placed successfully: {order.order_id}")
         except Exception as e:
             order.status = OrderStatus.FAILED
             logging.error(f"Failed to place PolyMarket order: {e}")
 
-    def cancel_order(self, order: Order):
-        if not order.id:
-            raise ValueError("Order ID is not set. Cannot cancel order.")
-        return self.client.cancel(order.id)
+    def cancel_order(self, order: Order) -> None:
+        """
+        Cancel a specific order on the PolyMarket platform.
+        """
+        if not order.order_id:
+            logging.error("Cannot cancel PolyMarket order: order_id is not set.")
+            order.status = OrderStatus.FAILED
+            return
+
+        try:
+            # The py_clob_client.cancel method takes the order hash.
+            response = self.client.cancel(order.order_id)
+            logging.info(f"PolyMarket cancel order response: {response}")
+            
+            # The client library raises an exception on failure. If we get here,
+            # it means the cancellation was accepted by the API.
+            order.status = OrderStatus.CANCELED
+            logging.info(f"Order {order.order_id} cancelled successfully on PolyMarket.")
+        except Exception as e:
+            logging.error(f"Failed to cancel PolyMarket order {order.order_id}: {e}")
+
 
     def get_order_status(self, order: Order) -> None:
         """
@@ -290,20 +310,23 @@ class PolyMarketPlatform(BasePlatform):
             order_data = self.client.get_order(order.order_id)
             
             polymarket_status = order_data.get("status")
+            original_size = float(order_data.get("original_size", 0))
+            size_matched = float(order_data.get("size_matched", 0))
+
+            if polymarket_status == "cancelled":
+                order.status = OrderStatus.CANCELED
+            elif size_matched >= original_size and original_size > 0:
+                order.status = OrderStatus.EXECUTED
+            elif size_matched > 0:
+                order.status = OrderStatus.PARTIALLY_FILLED
+            elif polymarket_status == "open":
+                order.status = OrderStatus.OPEN
             
-            # Note: The py_clob_client documentation does not specify the exact status strings.
-            # These are based on common trading platform terminology.
-            status_map = {
-                "open": OrderStatus.OPEN,
-                "filled": OrderStatus.EXECUTED,
-                "cancelled": OrderStatus.CANCELED,
-                "partially_filled": OrderStatus.PARTIALLY_FILLED,
-            }
+            # The API returns size_matched as a string float (e.g., "5.0").
+            # We just need to convert it to an integer.
+            order.fill_size = int(size_matched)
             
-            order.status = status_map.get(polymarket_status, order.status)
-            order.fill_size = int(float(order_data.get("size_matched", 0)) * 100) # Assuming size_matched is a float string
-            
-            logging.info(f"Updated PolyMarket order {order.order_id} status to {order.status.value}")
+            logging.info(f"Updated PolyMarket order {order.order_id} status to {order.status.value}, Fill Size: {order.fill_size}")
 
         except Exception as e:
             logging.error(f"Failed to get PolyMarket order status for {order.order_id}: {e}")

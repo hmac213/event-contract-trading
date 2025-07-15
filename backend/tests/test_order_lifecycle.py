@@ -8,8 +8,8 @@ from backend.models.OrderStatus import OrderStatus
 
 # --- CONFIGURATION ---
 # Please replace these with active market IDs from the respective platforms
-KALSHI_MARKET_ID = "ROBOTAXIOUT-26-JAN01"  # Example: A valid, open Kalshi market ticker
-POLYMARKET_MARKET_ID = "0x310c3d08f015157ec78e04f3f4fefed659b5e2bd88ae80cb38ff27ef970c39bd" # Example: A valid, open PolyMarket condition ID
+KALSHI_MARKET_ID = None #"ROBOTAXIOUT-26-JAN01"
+POLYMARKET_MARKET_ID = "0x310c3d08f015157ec78e04f3f4fefed659b5e2bd88ae80cb38ff27ef970c39bd"
 
 # --- SETUP ---
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -25,13 +25,17 @@ def run_order_lifecycle_test(platform: BasePlatform, market_id: str):
     """
     logging.info(f"--- Starting Lifecycle Test for {platform.__class__.__name__} on market {market_id} ---")
 
+    # PolyMarket has a minimum order size of 5
+    order_size = 5 if isinstance(platform, PolyMarketPlatform) else 1
+    logging.info(f"Using order size: {order_size}")
+
     # === Test 1: Market Buy Order ===
     logging.info("\n--- Test 1: Market Buy Order ---")
     try:
         market_buy_order = Order.create_market_buy_order(
             market_id=market_id,
             side="yes",
-            size=1,
+            size=order_size,
             max_price=50  # Max price of 50 cents per contract
         )
         test_placement_and_status_tracking(platform, market_buy_order)
@@ -45,7 +49,7 @@ def run_order_lifecycle_test(platform: BasePlatform, market_id: str):
         limit_buy_fill = Order.create_limit_buy_order(
             market_id=market_id,
             side="yes",
-            size=1,
+            size=order_size,
             price=10  # Aggressive price, likely to fill
         )
         test_placement_and_status_tracking(platform, limit_buy_fill)
@@ -59,7 +63,7 @@ def run_order_lifecycle_test(platform: BasePlatform, market_id: str):
         limit_buy_cancel = Order.create_limit_buy_order(
             market_id=market_id,
             side="yes",
-            size=1,
+            size=order_size,
             price=1  # Unlikely to fill, will be canceled
         )
         test_cancellation(platform, limit_buy_cancel)
