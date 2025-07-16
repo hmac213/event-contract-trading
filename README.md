@@ -77,7 +77,21 @@ This algorithm detects and quantifies arbitrage between two equivalent event-con
 
 4. If a hard spending limit is specified, a second binary search determines the maximum affordable quantity under that cap. The final trade size is the minimum of the profit-optimal and cost-constrained values.
 
-5. The function then returns an available arbitrage opportunity (if one exists), which we then execute on our trading engine.  
+5. The function then returns an available arbitrage opportunity (if one exists), which we then execute on our trading engine.
+
+#### The Math Behind the Algorithm
+
+This algorithm boils down to a mathematical optimization problem. That being said, we walk through the math which motivates our solution to finding arbitrage. Let $X$ be a candidate trade size, measured by the number of shares bought on each platform. In addition, we represent the orderbooks by $`\{(p_i, q_i)\}_{i \in \mathbb{N}}`$ and $`\{(p_i\prime, q_i\prime)\}_{i \in \mathbb{N}}`$ for the 'yes' and 'no' sides with $p$ tracking price and $q$ quantity. We represent the cumulative cost to buy $X$ shares on both platforms as $C(X)$. From here, we arrive at the driving formula:
+
+$$
+C(X) = \sum_{i} p_i \min\left(q_i, X - \sum_{j = 1}^{i - 1}q_j\right) + \sum_{i} p_i\prime \min\left(q_i\prime, X - \sum_{j = 1}^{i - 1}q_j\prime\right)
+$$
+
+After accounting for a cost, we desire some profit $\theta$ and account for market conditions by factoring in an expected slippage constant $\epsilon$. We then arrive at a final share quantity $X^{*}$ determined by
+
+$$
+X^{*} = \arg\max\left(C(X)(1 + \theta)(1 + \epsilon) \leq X\right).
+$$
 
 ### System Diagram
 Each component is modular, with clearly defined responsibilities across the `Backend`, `Core`, `Platform`, and `DB` directories. The `Manager` class coordinates the continuous trading engine and database updates.
