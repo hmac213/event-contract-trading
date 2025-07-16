@@ -42,7 +42,7 @@
             </a>
           </td>
           <td align="center" valign="top">
-            <b>Henry</b><br>
+            <b>Henry McNamara</b><br>
             <a href="https://www.linkedin.com/in/hmac213/">
               <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
             </a>
