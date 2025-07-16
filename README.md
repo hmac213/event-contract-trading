@@ -21,7 +21,7 @@
       <table>
         <tr>
           <td colspan="3" align="center" style="padding-bottom: 10px;">
-            <a href="https://github.com/harris-song/events-contract-trading/stargazers">
+            <a href="https://github.com/harris-song/events-contract-trading">
               <img src="https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github" alt="Star Project" />
             </a>
           </td>
