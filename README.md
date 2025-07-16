@@ -1,4 +1,4 @@
-## **Events Contract Trading**
+<img width="838" height="83" alt="image" src="https://github.com/user-attachments/assets/b6bcf220-a601-4209-94d7-9cc2c77c6b53" />## **Events Contract Trading**
 
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
 
@@ -16,12 +16,19 @@ Backed by a PostgreSQL database and integrated with a high-performance Python-ba
 
 ### Setup
 
+To get started with the project, clone the repository and install all necessary dependencies. Then, run the backend service using the command-line interface provided by the Manager module. This will initialize the API and connect to the configured PostgreSQL database, enabling real-time access to market data and arbitrage calculations.
+
 ```bash
 git clone https://github.com/harris-song/events-contract-trading
 cd events-contract-trading
 pip install -r requirements.txt
 python -m backend.core.Manager
 ```
+
+
+### System Diagram
+Each component is modular, with clearly defined responsibilities across the `Backend`, `Core`, `Platform`, and `DB` directories. The `Manager` class coordinates the continuous trading engine and database updates.
+
 
 ```mermaid
 graph TB
