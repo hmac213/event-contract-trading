@@ -51,6 +51,19 @@ pip install -r requirements.txt
 python -m backend.core.Manager
 ```
 
+### Cross-Platform Arbitrage Module
+
+This algorithm detects and quantifies arbitrage between two equivalent event-contract markets on separate platforms. Here's how it works:
+
+1. An LLM-based matcher identifies pairs of identical contracts (e.g. “Outcome X” on Platform A ↔ “Outcome X” on Platform B) and loads each platform’s live orderbook.
+
+2. Raw price–quantity levels are aggregated into monotonic cumulative curves, enabling rapid computation of the total cost to acquire any given quantity.
+
+3. A binary search over possible trade sizes finds the largest quantity for which expected proceeds (gross payout minus slippage buffer) meet or exceed the configured profit margin.
+
+4. If a hard spending limit is specified, a second binary search determines the maximum affordable quantity under that cap. The final trade size is the minimum of the profit-optimal and cost-constrained values.
+
+5. The function then returns an available arbitrage opportunity (if one exists), which we then execute on our trading engine.  
 
 ### System Diagram
 Each component is modular, with clearly defined responsibilities across the `Backend`, `Core`, `Platform`, and `DB` directories. The `Manager` class coordinates the continuous trading engine and database updates.
