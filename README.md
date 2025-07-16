@@ -19,6 +19,7 @@ cd events-contract-trading
 pip install -r requirements.txt
 python -m backend.core.Manager
 ```
+```mermaid
 graph TB
     %% External Components
     Polymarket[📊 Polymarket]
@@ -135,3 +136,4 @@ graph TB
     class PolyInterface,KalshiInterface,TestInterface,BasePlatform platform
     class Manager,Arbitrage,Similarity,ContinuousEngine,CheckArbitrage,UpdateMarkets core
     class DBManager,FastAPI,PostgreSQL database
+```
