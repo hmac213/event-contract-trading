@@ -9,7 +9,8 @@ Check it out:
 
 ### Introduction
 
-Interface for pulling Polymarket and Kalshi data, with continuous statistical arbitrage calculation. [OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat) for market comparison on new arbitrage opportunities. PostgreSQL and Python FAST endpoint API integration with Live Project Site, backend w/ RESTful API standards for accesing market data, creating API endpoints. 
+
+A robust, full-stack interface for real-time ingestion and processing of Polymarket and Kalshi data, designed to support continuous statistical arbitrage analysis across event-based markets. The system leverages [OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat) through the API to automatically detect and surface new cross-platform arbitrage opportunities through structured market comparisons. Backed by a PostgreSQL database and integrated with a high-performance Python-based FAST API, the backend adheres to RESTful API design principles, enabling reliable access to historical and live market data. A live project site provides real-time visualization and interaction with the arbitrage engine, while the API framework supports extensible endpoint creation for research, trading, and analytics applications.
 
 ### Setup
 
