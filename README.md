@@ -1,4 +1,6 @@
-## **Events Contract Trading**
+## **Events Contract Trading** [![App](https://img.shields.io/badge/App-events--contract--trading-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading)
+[![Star Project](https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github)](https://github.com/harris-song/events-contract-trading/stargazers)
+
 
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
 
