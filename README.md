@@ -8,9 +8,13 @@ Check it out:
 
 
 <table>
+  
   <tr>
     <td align="center">
-      <b>Harris</b><br>
+      <b> Live Project Site> 
+    </td>
+    <td align="center">
+      <b>Harris Song </b><br>
       <a href="https://www.linkedin.com/in/harris-song/">
         <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
       </a>
