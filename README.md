@@ -18,7 +18,10 @@ git clone https://github.com/harris-song/events-contract-trading
 cd events-contract-trading
 pip install -r requirements.txt
 python -m backend.core.Manager
-```graph TB
+```
+
+```mermaid
+graph TB
     %% External
     Polymarket[📊 Polymarket]
     Kalshi[🎯 Kalshi]
