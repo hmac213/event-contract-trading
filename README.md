@@ -9,7 +9,7 @@ Check it out:
 
 ### Introduction
 
-Interface for pulling Polymarket and Kalshi data, continuous updates fro
+Interface for pulling Polymarket and Kalshi data, with continuous statistical arbitrage calculation. [OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat) for market comparison on new arbitrage opportunities. PostgreSQL and Python FAST endpoint API integration with Live Project Site, backend w/ RESTful API standards for accesing market data, creating API endpoints. 
 
 ### Setup
 
