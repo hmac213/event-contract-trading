@@ -17,3 +17,7 @@ aiohttp
 requests
 python-dotenv
 cryptography
+
+sentence-transformers
+pinecone
+instructor

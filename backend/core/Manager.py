@@ -1,4 +1,4 @@
-from backend.core.Similarity import Similarity
+from backend.core.Similarity import SimilarityManager
 from backend.models.PlatformType import PlatformType
 from backend.platform.KalshiPlatform import KalshiPlatform
 from backend.platform.PolyMarketPlatform import PolyMarketPlatform
@@ -19,6 +19,7 @@ class Manager():
                          PlatformType.POLYMARKET: PolyMarketPlatform()}
         self.db_manager = DBManager()
         self.logger = logging.getLogger(__name__)
+        self.similarity_manager = SimilarityManager(self.db_manager)
     
         self.set_verbose(verbose)
 
@@ -68,7 +69,7 @@ class Manager():
         if cross_platform_new_markets:
             start_time = datetime.now()
             self.logger.info("Checking for market similarities...")
-            all_pairings = Similarity.check_similarity(cross_platform_new_markets)
+            all_pairings = self.similarity_manager.check_similarity(cross_platform_new_markets)
             self.db_manager.add_market_pairs(all_pairings)
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             self.logger.info("Market Similarity Check Duration: %d ms", duration_ms)
