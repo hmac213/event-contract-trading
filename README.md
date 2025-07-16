@@ -1,44 +1,58 @@
-## **Events Contract Trading** [![App](https://img.shields.io/badge/App-events--contract--trading-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading) [![Star Project](https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github)](https://github.com/harris-song/events-contract-trading/stargazers)
+## **Events Contract Trading** [![App](https://img.shields.io/badge/App-events--contract--trading-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading)  ![Last Commit](https://img.shields.io/github/last-commit/hmac213/event-contract-trading?color=blue) ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+
+
 
 
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
-
-Check it out:  
-[Live Project Site](https://harris-song.github.io/events-contract-trading)
-
-
-<table>
-  
+<table border="0" cellspacing="0" cellpadding="0" style="width: 100%";>
   <tr>
-    <td align="center">
-      <b> Live Project Site> 
+    <!-- LEFT COLUMN: Introduction -->
+    <td valign="top" width="60%" cellpading="0">
+      <h2>Introduction</h2>
+      <p>
+        A robust, full-stack interface for real-time ingestion and processing of Polymarket and Kalshi data, designed to support continuous statistical arbitrage analysis across event-based markets. The system leverages 
+        <a href="https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat">OpenAI Structured Outputs</a> 
+        through the API to automatically detect and surface new cross-platform arbitrage opportunities through structured market comparisons.
+      </p>
+      <p>
+      </p>
     </td>
-    <td align="center">
-      <b>Harris Song </b><br>
-      <a href="https://www.linkedin.com/in/harris-song/">
-        <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
-      </a>
-      <a href="https://harris-song.github.io">
-        <img src="https://img.shields.io/badge/Website-harris--song.github.io-blue?logo=google-chrome&logoColor=white" alt="Website" />
-      </a>
-    </td>
-    <td align="center">
-      <b>Henry</b><br>
-      <a href="https://www.linkedin.com/in/hmac213/">
-        <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
-      </a>
+    <td valign="center" align="center" width="40%">
+      <table>
+        <tr>
+          <td colspan="3" align="center" style="padding-bottom: 10px;">
+            <a href="https://github.com/harris-song/events-contract-trading/stargazers">
+              <img src="https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github" alt="Star Project" />
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3" align="center" style="padding-bottom: 20px;">
+            🔗 <a href="https://harris-song.github.io/events-contract-trading"><strong>Live Project Site</strong></a>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" valign="top">
+            <b>Harris Song</b><br>
+            <a href="https://www.linkedin.com/in/harris-song/">
+              <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
+            </a><br>
+            <a href="https://harris-song.github.io">
+              <img src="https://img.shields.io/badge/Website-harris--song.github.io-blue?logo=google-chrome&logoColor=white" alt="Website" />
+            </a>
+          </td>
+          <td align="center" valign="top">
+            <b>Henry</b><br>
+            <a href="https://www.linkedin.com/in/hmac213/">
+              <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
+            </a>
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
 </table>
-
----
-
-### Introduction
-
-
-A robust, full-stack interface for real-time ingestion and processing of Polymarket and Kalshi data, designed to support continuous statistical arbitrage analysis across event-based markets. The system leverages [OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat) through the API to automatically detect and surface new cross-platform arbitrage opportunities through structured market comparisons. 
-
-Backed by a PostgreSQL database and integrated with a high-performance Python-based FAST API, the backend adheres to RESTful API design principles, enabling reliable access to historical and live market data. A live project site provides real-time visualization and interaction with the arbitrage engine, while the API framework supports extensible endpoint creation for research, trading, and analytics applications.
+        Backed by a PostgreSQL database and integrated with a high-performance Python-based FAST API, the backend adheres to RESTful API design principles, enabling reliable access to historical and live market data. A live project site provides real-time visualization and interaction with the arbitrage engine, while the API framework supports extensible endpoint creation for research, trading, and analytics applications.
 
 ### Setup
 
