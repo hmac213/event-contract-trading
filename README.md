@@ -1,5 +1,4 @@
-## **Events Contract Trading**[![App](https://img.shields.io/badge/App-Live-green?style=for-the-badge&logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading/)
-  ![Last Commit](https://img.shields.io/github/last-commit/hmac213/event-contract-trading?color=blue) ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+## **Events Contract Trading** [![Project Page](https://img.shields.io/badge/App-events--contract--trading-green?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading) ![Last Commit](https://img.shields.io/github/last-commit/hmac213/event-contract-trading?color=blue) ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
 
 
 
