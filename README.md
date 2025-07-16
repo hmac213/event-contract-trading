@@ -6,8 +6,9 @@ Check it out:
 [Live Project Site](https://harris-song.github.io/events-contract-trading)
 
 
-Harris: [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/harris-song/)
-Henry: [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/hmac213/)
+Harris:   [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/harris-song/)  [![Website](https://img.shields.io/badge/Website-harris--song.github.io-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io)
+
+Henry:    [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/hmac213/)
 
 ---
 
