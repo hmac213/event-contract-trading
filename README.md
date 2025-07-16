@@ -69,15 +69,15 @@ graph TB
         subgraph DBManager["DB Manager Class"]
             AddBooks[Add BOOKS]
             GetMarketPairs[Get All MARKET<br/>PAIRS]
-            NewMarkets[New MARKETS?<br/>(market_ids: list[int])]
-            AddMarkets[Add MARKETS<br/>(markets: list[Market])]
-            GetBooks[Get BOOKS<br/>(market_ids: list[int])]
-            AddMarketPairs[Add MARKET PAIRS<br/>(markets: list[Market])]
+            NewMarkets["New MARKETS?<br/>(market_ids: list[int])"]
+            AddMarkets["Add MARKETS<br/>(markets: list[Market])"]
+            GetBooks["Get BOOKS<br/>(market_ids: list[int])"]
+            AddMarketPairs["Add MARKET PAIRS<br/>(markets: list[Market])"]
         end
         
         subgraph FastAPI["Fast API Wrapper Class"]
             APIGetMarketPairs[/api/get_market_pairs]
-            APIGetOrderBooks[/api/get_order_books/?=[market_ids]]
+            APIGetOrderBooks["/api/get_order_books/?=market_ids"]
         end
         
         PostgreSQL[(PostgreSQL)]
@@ -136,4 +136,5 @@ graph TB
     class PolyInterface,KalshiInterface,TestInterface,BasePlatform platform
     class Manager,Arbitrage,Similarity,ContinuousEngine,CheckArbitrage,UpdateMarkets core
     class DBManager,FastAPI,PostgreSQL database
+
 ```
