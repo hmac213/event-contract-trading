@@ -24,7 +24,7 @@ class SimilarityManager:
         if not pinecone_api_key:
             raise ValueError("PINECONE_API_KEY environment variable not set.")
 
-        self.pinecone = pinecone.Pinecone(api_key=pinecone_api_key)
+        self.pinecone = pinecone.Pinecone(api_key=pinecone_api_key, model=self.model)
         self.index_name = "event-contract-markets"
 
         if self.index_name not in self.pinecone.list_indexes().names():

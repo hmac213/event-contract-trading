@@ -27,6 +27,12 @@ class Manager():
         level = logging.DEBUG if verbose else logging.INFO
         logging.basicConfig(level=level, format='[%(asctime)s] %(levelname)s: %(message)s')
     def continuous_trading_engine(self):
+        # Initial market data population
+        self.logger.info("Starting initial market data population...")
+        self.update_markets()
+        self.check_arbitrage()
+        self.logger.info("Initial market data population complete.")
+        
         # Start market updater in a separate thread
         threading.Thread(target=self._market_updater, daemon=True).start()
         
@@ -37,15 +43,16 @@ class Manager():
             self.check_arbitrage()
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             self.logger.info("Arbitrage Check Duration: %d ms", duration_ms)
+            time.sleep(5)
 
     def _market_updater(self):
         while True:
+            time.sleep(1)
             start_time = datetime.now()
             self.logger.info("Starting Market Update")
             self.update_markets()
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             self.logger.info("Market Update Duration: %d ms", duration_ms)
-            time.sleep(60)  # Wait 60 seconds before next update
 
     def update_markets(self):
         # Update markets from all platforms
@@ -68,9 +75,25 @@ class Manager():
         
         if cross_platform_new_markets:
             start_time = datetime.now()
+            self.logger.info("Adding new markets to similarity index...")
+            self.similarity_manager.add_markets_to_index(cross_platform_new_markets)
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            self.logger.info("Finished adding markets to index in %d ms", duration_ms)
+
+            start_time = datetime.now()
             self.logger.info("Checking for market similarities...")
-            all_pairings = self.similarity_manager.check_similarity(cross_platform_new_markets)
-            self.db_manager.add_market_pairs(all_pairings)
+            all_pairings = []
+            for market in cross_platform_new_markets:
+                similar_markets = self.similarity_manager.find_similar_markets(market.market_id)
+                for similar_market in similar_markets:
+                    pair = tuple(sorted((market.market_id, similar_market.market_id)))
+                    all_pairings.append(pair)
+            
+            unique_pairings = list(set(all_pairings))
+
+            if unique_pairings:
+                self.db_manager.add_market_pairs(unique_pairings)
+
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             self.logger.info("Market Similarity Check Duration: %d ms", duration_ms)
         
@@ -102,6 +125,12 @@ class Manager():
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             logging.info(f"Fetched {len(orderbooks)} order books for platform {platform} in {duration_ms} ms")
 
+        # Filter out orderbooks that are empty
+        all_orderbooks = [ob for ob in all_orderbooks if ob.yes and ob.no]
+        if not all_orderbooks:
+            self.logger.info("No non-empty orderbooks found.")
+            return
+
         ids_to_market = {market.market_id: market for market in markets}
         ids_to_orderbook = {order_book.market_id: order_book for order_book in all_orderbooks}
         # Step 5: Store all orderbooks
@@ -125,7 +154,7 @@ class Manager():
                 platform1_obj = self.platforms[market1.platform]
                 platform2_obj = self.platforms[market2.platform]
                 
-                ExecuteArbitrage.place_arbitrage_orders(market1, market2, platform1_obj, platform2_obj, opportunity)
+                # ExecuteArbitrage.place_arbitrage_orders(market1, market2, platform1_obj, platform2_obj, opportunity)
 
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
         self.logger.info("Finished checking all pairs in %d ms", duration_ms)
