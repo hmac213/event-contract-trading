@@ -1,4 +1,4 @@
-<img width="838" height="83" alt="image" src="https://github.com/user-attachments/assets/b6bcf220-a601-4209-94d7-9cc2c77c6b53" />## **Events Contract Trading**
+## **Events Contract Trading**
 
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
 
