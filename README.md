@@ -1,5 +1,4 @@
-## **Events Contract Trading** [![App](https://img.shields.io/badge/App-events--contract--trading-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading)
-[![Star Project](https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github)](https://github.com/harris-song/events-contract-trading/stargazers)
+## **Events Contract Trading** [![App](https://img.shields.io/badge/App-events--contract--trading-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io/events-contract-trading) [![Star Project](https://img.shields.io/badge/Star%20Project-on%20GitHub-yellow?style=for-the-badge&logo=github)](https://github.com/harris-song/events-contract-trading/stargazers)
 
 
 **Kalshi / Polymarket Statistical Arbitrage Monitoring and Trade Execution**
@@ -8,9 +7,25 @@ Check it out:
 [Live Project Site](https://harris-song.github.io/events-contract-trading)
 
 
-Harris:   [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/harris-song/)  [![Website](https://img.shields.io/badge/Website-harris--song.github.io-blue?logo=google-chrome&logoColor=white)](https://harris-song.github.io)
-
-Henry:    [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/hmac213/)
+<table>
+  <tr>
+    <td align="center">
+      <b>Harris</b><br>
+      <a href="https://www.linkedin.com/in/harris-song/">
+        <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
+      </a>
+      <a href="https://harris-song.github.io">
+        <img src="https://img.shields.io/badge/Website-harris--song.github.io-blue?logo=google-chrome&logoColor=white" alt="Website" />
+      </a>
+    </td>
+    <td align="center">
+      <b>Henry</b><br>
+      <a href="https://www.linkedin.com/in/hmac213/">
+        <img src="https://img.shields.io/badge/LinkedIn-blue?logo=linkedin&logoColor=white" alt="LinkedIn" />
+      </a>
+    </td>
+  </tr>
+</table>
 
 ---
 
