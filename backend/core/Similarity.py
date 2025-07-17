@@ -1,9 +1,8 @@
 import instructor
-import numpy as np
 import os
 import pinecone
+import time
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
 from typing import List
 from openai import OpenAI
 
@@ -17,57 +16,52 @@ class MarketPrediction(BaseModel):
 
 class SimilarityManager:
     def __init__(self, db_manager: DBManager):
-        self.model = SentenceTransformer("intfloat/multilingual-e5-large")
-        self.embedding_dimension = 1024
-
         pinecone_api_key = os.getenv("PINECONE_API_KEY")
         if not pinecone_api_key:
             raise ValueError("PINECONE_API_KEY environment variable not set.")
 
-        self.pinecone = pinecone.Pinecone(api_key=pinecone_api_key, model=self.model)
+        self.pinecone = pinecone.Pinecone(api_key=pinecone_api_key)
         self.index_name = "event-contract-markets"
 
         if self.index_name not in self.pinecone.list_indexes().names():
-            self.pinecone.create_index(
+            self.pinecone.create_index_for_model(
                 name=self.index_name,
-                dimension=self.embedding_dimension,
-                metric="cosine",
-                spec=pinecone.ServerlessSpec(cloud='aws', region='us-east-1')
+                cloud="aws",
+                region="us-east-1",
+                embed= {
+                    "model": "multilingual-e5-large",
+                    "field_map": {
+                        "text": "text"
+                    }
+                }
             )
         self.index = self.pinecone.Index(self.index_name)
 
         self.client = instructor.patch(OpenAI())
         self.db_manager = db_manager
 
-    def _embed_sentences(self, sentences: List[str]) -> np.ndarray:
-        embeddings = self.model.encode(
-            sentences,
-            batch_size=16,
-            convert_to_numpy=True
-        )
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        return embeddings / norms
-
     def add_markets_to_index(self, markets: List[Market]):
-        vectors_to_upsert = []
+        records_to_upsert = []
         for market in markets:
-            name_embedding, rules_embedding = self._embed_sentences([market.name, market.rules])
-
-            vectors_to_upsert.append({
+            records_to_upsert.append({
                 "id": f"{market.market_id}-name",
-                "values": name_embedding.tolist(),
-                "metadata": {"market_id": str(market.market_id), "platform": market.platform.value, "type": "name"}
+                "text": market.name,
+                "market_id": str(market.market_id),
+                "platform": market.platform.value,
+                "type": "name"
             })
-            vectors_to_upsert.append({
+            records_to_upsert.append({
                 "id": f"{market.market_id}-rule",
-                "values": rules_embedding.tolist(),
-                "metadata": {"market_id": str(market.market_id), "platform": market.platform.value, "type": "rule"}
+                "text": market.rules,
+                "market_id": str(market.market_id),
+                "platform": market.platform.value,
+                "type": "rule"
             })
         
-        if vectors_to_upsert:
-            for i in range(0, len(vectors_to_upsert), 100):
-                batch = vectors_to_upsert[i:i+100]
-                self.index.upsert(vectors=batch)
+        if records_to_upsert:
+            for i in range(0, len(records_to_upsert), 100):
+                batch = records_to_upsert[i:i+100]
+                self.index.upsert_records(records=batch, namespace="__default__")
 
     def find_similar_markets(self, market_id: str) -> List[Market]:
         markets = self.db_manager.get_markets([market_id])
@@ -75,19 +69,20 @@ class SimilarityManager:
             return []
         market = markets[0]
 
-        market_name_embedding = self._embed_sentences([market.name])[0]
-
-        query_response = self.index.query(
-            vector=market_name_embedding.tolist(),
-            top_k=3,
-            filter={
-                "platform": {"$ne": market.platform.value},
-                "type": "name"
+        query_response = self.index.search(
+            namespace="__default__",
+            query={
+                "inputs": {"text": market.name},
+                "top_k": 3,
+                "filter": {
+                    "platform": {"$ne": market.platform.value},
+                    "type": "name"
+                },
             },
-            include_metadata=True
+            fields=["market_id"]
         )
 
-        candidate_market_ids = [match['metadata']['market_id'] for match in query_response['matches']]
+        candidate_market_ids = [match['fields']['market_id'] for match in query_response['result']['hits'] if 'market_id' in match['fields']]
         
         if not candidate_market_ids:
             return []
