@@ -1,5 +1,7 @@
 __pycache__/
 backend/tests/*.png
 .env
+.env.trading
+.env.data
 *.png
 venv

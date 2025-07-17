@@ -21,3 +21,5 @@ cryptography
 sentence-transformers
 pinecone
 instructor
+
+redis

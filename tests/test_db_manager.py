@@ -7,11 +7,11 @@ from datetime import datetime
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from backend.db.DBManager import DBManager
-from backend.models.Market import Market
-from backend.models.PlatformType import PlatformType
-from backend.platform.KalshiPlatform import KalshiPlatform
-from backend.platform.PolyMarketPlatform import PolyMarketPlatform
+from db.DBManager import DBManager
+from models.Market import Market
+from models.PlatformType import PlatformType
+from platform.KalshiPlatform import KalshiPlatform
+from platform.PolyMarketPlatform import PolyMarketPlatform
 
 
 def print_separator(title):

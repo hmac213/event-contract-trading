@@ -1,14 +1,14 @@
 from typing import List
-from backend.models.Market import Market
-from backend.models.Orderbook import Orderbook
-from backend.platform.BasePlatform import BasePlatform
-from backend.models.Order import Order
+from models.Market import Market
+from models.Orderbook import Orderbook
+from platform.BasePlatform import BasePlatform
+from models.Order import Order
 from py_clob_client.client import ClobClient 
 from py_clob_client.clob_types import BookParams, OrderArgs, OrderType
 from dotenv import load_dotenv
 import os
 import requests
-from backend.models.PlatformType import PlatformType
+from models.PlatformType import PlatformType
 import logging
 import json
 import aiohttp
@@ -16,7 +16,7 @@ import asyncio
 from datetime import datetime
 import time
 from py_clob_client.order_builder.constants import BUY, SELL
-from backend.models.OrderStatus import OrderStatus
+from models.OrderStatus import OrderStatus
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):

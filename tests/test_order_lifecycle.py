@@ -1,10 +1,10 @@
 import time
 import logging
-from backend.models.Order import Order
-from backend.platform.KalshiPlatform import KalshiPlatform
-from backend.platform.PolyMarketPlatform import PolyMarketPlatform
-from backend.platform.BasePlatform import BasePlatform
-from backend.models.OrderStatus import OrderStatus
+from models.Order import Order
+from platform.KalshiPlatform import KalshiPlatform
+from platform.PolyMarketPlatform import PolyMarketPlatform
+from platform.BasePlatform import BasePlatform
+from models.OrderStatus import OrderStatus
 
 # --- CONFIGURATION ---
 # Please replace these with active market IDs from the respective platforms

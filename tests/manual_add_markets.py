@@ -1,7 +1,7 @@
-from backend.platform.PolyMarketPlatform import PolyMarketPlatform
-from backend.platform.KalshiPlatform import KalshiPlatform
+from platform.PolyMarketPlatform import PolyMarketPlatform
+from platform.KalshiPlatform import KalshiPlatform
 from backend.core.CrossPlatformArbitrage import calculate_cross_platform_arbitrage
-from backend.db.DBManager import DBManager
+from db.DBManager import DBManager
 
 
 kalshi = KalshiPlatform()

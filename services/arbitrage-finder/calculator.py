@@ -1,7 +1,6 @@
-from backend.models.Orderbook import Orderbook
+from models.Orderbook import Orderbook
 from typing import List, Tuple, Optional, Dict, Any
 import math
-
 
 def calculate_cross_platform_arbitrage(
     ob1: Orderbook,
@@ -61,7 +60,7 @@ def calculate_cross_platform_arbitrage(
             
     def get_arbitrage_details(curve1: List[Tuple[int, int, int]], curve2: List[Tuple[int, int, int]]) -> Tuple[int, int, int, int]:
         lo = 1
-        hi = min(curve1[-1][0], curve2[-1][0])
+        hi = min(curve1[-1][0], curve2[-1][0]) if curve1 and curve2 else 0
         best_profit_shares = 0
 
         while lo <= hi:
@@ -86,7 +85,7 @@ def calculate_cross_platform_arbitrage(
         
         best_cost_shares = float('inf')
         if max_cost is not None:
-            lo, hi, best_cost_shares = 1, min(curve1[-1][0], curve2[-1][0]), 0
+            lo, hi, best_cost_shares = 1, min(curve1[-1][0], curve2[-1][0]) if curve1 and curve2 else 0, 0
             while lo <= hi:
                 mid = (lo + hi) // 2
                 if cost_of_shares(mid, curve1) + cost_of_shares(mid, curve2) <= max_cost:

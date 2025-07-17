@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 import logging
 import time
 from typing import List
-from backend.models.Market import Market
-from backend.models.Orderbook import Orderbook
-from backend.platform.BasePlatform import BasePlatform
-from backend.models.PlatformType import PlatformType
-from backend.models.Order import Order
+from models.Market import Market
+from models.Orderbook import Orderbook
+from platform.BasePlatform import BasePlatform
+from models.PlatformType import PlatformType
+from models.Order import Order
 import requests
 from dotenv import load_dotenv
 import asyncio
@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.backends import default_backend
 from requests.auth import AuthBase
 from urllib.parse import urlparse
-from backend.models.OrderStatus import OrderStatus
+from models.OrderStatus import OrderStatus
 
 load_dotenv()  
 

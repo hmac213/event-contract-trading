@@ -1,14 +1,14 @@
 # extends Base Market
-from backend.models.Market import Market
-from backend.models.Orderbook import Orderbook
-from backend.platform.BasePlatform import BasePlatform
-from backend.models.PlatformType import PlatformType
+from models.Market import Market
+from models.Orderbook import Orderbook
+from platform.BasePlatform import BasePlatform
+from models.PlatformType import PlatformType
 from random import randint, random
 import time
 import string
 import random
 from random import randint
-from backend.models.Order import Order
+from models.Order import Order
 
 class TestPlatform(BasePlatform):
     def get_order_books(self, market_ids: list[str]) -> list[Orderbook]:

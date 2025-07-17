@@ -1,11 +1,11 @@
 # import abstract class
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
-from backend.models.Order import Order
+from models.Order import Order
 
 if TYPE_CHECKING:
-    from backend.models.Market import Market
-    from backend.models.Orderbook import Orderbook
+    from models.Market import Market
+    from models.Orderbook import Orderbook
     
 class BasePlatform(ABC):
     @abstractmethod

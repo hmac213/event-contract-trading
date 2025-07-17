@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
 
-from backend.db.DBManager import DBManager
-from backend.models.Market import Market
+from db.DBManager import DBManager
+from models.Market import Market
 
 
 class MarketPrediction(BaseModel):
@@ -98,8 +98,9 @@ class SimilarityManager:
 
     def _check_GPT_similarity(self, market1: Market, market2: Market) -> bool:
         try:
+            model_name = os.getenv("GPT_MODEL_NAME", "gpt-4o-2024-08-06")
             prediction: MarketPrediction = self.client.chat.completions.create(
-                model="gpt-4o-2024-08-06",
+                model=model_name,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant whose job is to determine whether two event contract markets are IDENTICAL to each other."},
                     {"role": "system", "content": "We define two event contracts to be IDENTICAL if and only if they track the same event outcome and resolve under the same rules."},
