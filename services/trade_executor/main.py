@@ -67,7 +67,7 @@ class TradeExecutionService:
 
                 print(f"Executing arbitrage trade for opportunity: {opportunity}")
                 create_arbitrage_orders(
-                    market1, market2, platform1_client, platform2_client, opportunity
+                    market1, market2, platform1_client, platform2_client, opportunity, self.db_manager
                 )
                 
                 self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)

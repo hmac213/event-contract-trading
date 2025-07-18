@@ -19,6 +19,7 @@ from cryptography.hazmat.backends import default_backend
 from requests.auth import AuthBase
 from urllib.parse import urlparse
 from models.OrderStatus import OrderStatus
+from models.Trade import Trade
 
 class KalshiAuth(AuthBase):
     def __init__(self, key_id: str, private_key: rsa.RSAPrivateKey):
@@ -312,21 +313,21 @@ class KalshiPlatform(BasePlatform):
         else:
             logging.error(f"Failed to cancel Kalshi order {order.order_id}: {response.status_code} - {response.text}")
 
-    def get_order_status(self, order: Order) -> None:
+    def get_order_status(self, order: Order) -> List[Trade]:
         """
-        Get the status of a specific order from the Kalshi platform and update the order object.
+        Get the status of a specific order from the Kalshi platform, 
+        update the order object, and return any new fills.
         """
         if not order.order_id:
             logging.error("Cannot get order status: order_id is not set.")
             order.status = OrderStatus.FAILED
-            return
+            return []
 
         response = self.session.get(f"{self.base_url}/portfolio/orders/{order.order_id}")
 
         if response.status_code != 200:
             logging.error(f"Failed to get order status for {order.order_id}: {response.status_code} - {response.text}")
-            # Decide if status should be set to FAILED or left as is
-            return
+            return []
 
         order_data = response.json().get("order", {})
         
@@ -342,5 +343,24 @@ class KalshiPlatform(BasePlatform):
         order.status = status_map.get(kalshi_status, order.status)
         order.fill_size = order_data.get("fillsTotalCount", order.fill_size)
 
+        # Fetch and return fills
+        fills_response = self.session.get(f"{self.base_url}/portfolio/fills?order_id={order.order_id}")
+        if fills_response.status_code == 200:
+            fills_data = fills_response.json().get("fills", [])
+            new_trades = []
+            for fill in fills_data:
+                new_trades.append(Trade(
+                    order_id=order.id,
+                    platform_trade_id=fill['fill_id'],
+                    quantity=fill['count'],
+                    price=fill['price'],
+                    executed_at=fill['created_ts']
+                ))
+            logging.info(f"Found {len(new_trades)} fills for order {order.order_id}.")
+            return new_trades
+        else:
+            logging.error(f"Failed to fetch fills for order {order.order_id}: {fills_response.status_code}")
+
         logging.info(f"Updated order {order.order_id} status to {order.status.value}")
+        return []
         

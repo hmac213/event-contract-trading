@@ -1,11 +1,13 @@
 from typing import Optional, Self
 import uuid
 from models.OrderStatus import OrderStatus
+from models.PlatformType import PlatformType
 
 class Order:
     def __init__(
         self,
         market_id: str,
+        platform: PlatformType,
         side: str,
         action: str,
         order_type: str,
@@ -32,16 +34,18 @@ class Order:
         self.status = status
         self.order_id = order_id
         self.fill_size = fill_size
+        self.platform = platform
 
     @classmethod
     def create_limit_buy_order(
-        cls, market_id: str, side: str, size: int, price: int, time_in_force: str = 'GTC'
+        cls, market_id: str, platform: PlatformType, side: str, size: int, price: int, time_in_force: str = 'GTC'
     ) -> Self:
         """Factory for creating a limit buy order."""
         if not (0 < price < 100):
             raise ValueError("Price for a limit order must be between 1 and 99 cents.")
         return cls(
             market_id=market_id,
+            platform=platform,
             side=side,
             action="buy",
             order_type="limit",
@@ -52,13 +56,14 @@ class Order:
 
     @classmethod
     def create_limit_sell_order(
-        cls, market_id: str, side: str, size: int, price: int, time_in_force: str = 'GTC'
+        cls, market_id: str, platform: PlatformType, side: str, size: int, price: int, time_in_force: str = 'GTC'
     ) -> Self:
         """Factory for creating a limit sell order."""
         if not (0 < price < 100):
             raise ValueError("Price for a limit order must be between 1 and 99 cents.")
         return cls(
             market_id=market_id,
+            platform=platform,
             side=side,
             action="sell",
             order_type="limit",
@@ -69,7 +74,7 @@ class Order:
 
     @classmethod
     def create_market_buy_order(
-        cls, market_id: str, side: str, size: int, max_price: int, time_in_force: str = 'IOC'
+        cls, market_id: str, platform: PlatformType, side: str, size: int, max_price: int, time_in_force: str = 'IOC'
     ) -> Self:
         """
         Factory for creating a market buy order.
@@ -79,6 +84,7 @@ class Order:
             raise ValueError("max_price for a market buy order must be between 1 and 100 cents.")
         return cls(
             market_id=market_id,
+            platform=platform,
             side=side,
             action="buy",
             order_type="market",
@@ -89,11 +95,12 @@ class Order:
 
     @classmethod
     def create_market_sell_order(
-        cls, market_id: str, side: str, size: int, time_in_force: str = 'IOC'
+        cls, market_id: str, platform: PlatformType, side: str, size: int, time_in_force: str = 'IOC'
     ) -> Self:
         """Factory for creating a market sell order."""
         return cls(
             market_id=market_id,
+            platform=platform,
             side=side,
             action="sell",
             order_type="market",

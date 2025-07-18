@@ -17,6 +17,7 @@ from datetime import datetime
 import time
 from py_clob_client.order_builder.constants import BUY, SELL
 from models.OrderStatus import OrderStatus
+from models.Trade import Trade
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
@@ -39,6 +40,12 @@ class PolyMarketPlatform(BasePlatform):
         # for Gamma API access
         self.base_url = "https://gamma-api.polymarket.com"
         self.client.set_api_creds(self.client.create_or_derive_api_creds())
+
+    def _get_trade(self, trade_id: str) -> dict:
+        """Fetches a single trade by its ID."""
+        response = requests.get(f"{self.client.host}/data/trade/{trade_id}")
+        response.raise_for_status()
+        return response.json()
 
     async def _fetch_market(self, session, base_url, market_id):
         url = f"{base_url}/markets?condition_ids={market_id}"
@@ -297,14 +304,15 @@ class PolyMarketPlatform(BasePlatform):
             logging.error(f"Failed to cancel PolyMarket order {order.order_id}: {e}")
 
 
-    def get_order_status(self, order: Order) -> None:
+    def get_order_status(self, order: Order) -> List[Trade]:
         """
-        Get the status of a specific order from the PolyMarket platform and update the order object.
+        Get the status of a specific order from the PolyMarket platform, 
+        update the order object, and return any new fills.
         """
         if not order.order_id:
             logging.error("Cannot get PolyMarket order status: order_id is not set.")
             order.status = OrderStatus.FAILED
-            return
+            return []
 
         try:
             order_data = self.client.get_order(order.order_id)
@@ -322,15 +330,29 @@ class PolyMarketPlatform(BasePlatform):
             elif polymarket_status == "open":
                 order.status = OrderStatus.OPEN
             
-            # The API returns size_matched as a string float (e.g., "5.0").
-            # We just need to convert it to an integer.
             order.fill_size = int(size_matched)
             
+            # Fetch and return fills
+            if order_data.get("associate_trades"):
+                new_trades = []
+                for trade_id in order_data["associate_trades"]:
+                    trade_data = self._get_trade(trade_id)
+                    new_trades.append(Trade(
+                        order_id=order.id,
+                        platform_trade_id=trade_data['id'],
+                        quantity=int(float(trade_data['size'])),
+                        price=int(float(trade_data['price']) * 100),
+                        executed_at=trade_data['timestamp'] 
+                    ))
+                logging.info(f"Found {len(new_trades)} new fills for order {order.order_id}.")
+                return new_trades
+
             logging.info(f"Updated PolyMarket order {order.order_id} status to {order.status.value}, Fill Size: {order.fill_size}")
 
         except Exception as e:
             logging.error(f"Failed to get PolyMarket order status for {order.order_id}: {e}")
-            # Decide if status should be set to FAILED or left as is
+
+        return []
 
     def _get_token_id(self, market_id: str, side: str) -> str:
         cid_to_tkd = asyncio.run(self._fetch_all_cid_to_tkd(self.base_url, [market_id]))

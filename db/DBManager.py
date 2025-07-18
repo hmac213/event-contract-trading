@@ -1,5 +1,8 @@
 from models.PlatformType import PlatformType
 from models.Market import Market
+from models.Order import Order
+from models.Trade import Trade
+from models.OrderStatus import OrderStatus
 from models.Orderbook import Orderbook
 from supabase import create_client
 import os
@@ -166,3 +169,82 @@ class DBManager():
                 existing_ids.update(row["market_id"] for row in response.data)
 
         return [m_id for m_id in market_ids if m_id not in existing_ids]
+
+    def add_order(self, order: Order) -> str:
+        """
+        Adds a new order to the database and returns the generated internal ID.
+        """
+        order_dict = {
+            "market_id": order.market_id,
+            "platform": order.platform.value,
+            "side": order.side,
+            "action": order.action,
+            "order_type": order.order_type,
+            "quantity": order.size,
+            "limit_price": order.price,
+            "status": order.status.value,
+            "client_order_id": order.client_order_id
+        }
+        response = self.supabase.table("orders").insert(order_dict).execute()
+        
+        if response.data:
+            return response.data[0]['id']
+        raise Exception("Failed to add order to database.")
+
+    def update_order(self, order: Order) -> None:
+        """
+        Updates an existing order in the database.
+        """
+        updates = {
+            "status": order.status.value,
+            "platform_order_id": order.order_id,
+            "fill_size": order.fill_size
+        }
+        self.supabase.table("orders").update(updates).eq("id", order.id).execute()
+
+    def get_unsettled_orders(self) -> list[Order]:
+        """
+        Fetches all orders that are not in a terminal state (EXECUTED, CANCELED, FAILED).
+        """
+        response = (
+            self.supabase.table("orders")
+            .select("*")
+            .in_("status", [OrderStatus.PENDING.value, OrderStatus.OPEN.value, OrderStatus.PARTIALLY_FILLED.value])
+            .execute()
+        )
+        
+        orders = []
+        if response.data:
+            for row in response.data:
+                order = Order(
+                    id=row["id"],
+                    market_id=row["market_id"],
+                    platform=PlatformType(row["platform"]),
+                    side=row["side"],
+                    action=row["action"],
+                    order_type=row["order_type"],
+                    size=row["quantity"],
+                    price=row["limit_price"],
+                    status=OrderStatus(row["status"]),
+                    order_id=row["platform_order_id"],
+                    fill_size=row["fill_size"],
+                    client_order_id=row["client_order_id"]
+                )
+                orders.append(order)
+        return orders
+
+    def add_trades(self, trades: list[Trade]) -> None:
+        """
+        Adds new trades to the database.
+        """
+        trade_dicts = [
+            {
+                "order_id": trade.order_id,
+                "platform_trade_id": trade.platform_trade_id,
+                "quantity": trade.quantity,
+                "price": trade.price,
+                "executed_at": trade.executed_at
+            }
+            for trade in trades
+        ]
+        self.supabase.table("trades").insert(trade_dicts).execute()

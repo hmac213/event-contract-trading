@@ -4,15 +4,17 @@ from models.Market import Market
 from models.Order import Order
 from models.OrderStatus import OrderStatus
 from platforms.BasePlatform import BasePlatform
+from db.DBManager import DBManager
 
 POLLING_TIMEOUT_S = 30  # Max time to wait for a chunk to fill
 
-def place_arbitrage_orders(
+def create_arbitrage_orders(
     market1: Market,
     market2: Market,
     platform1: BasePlatform,
     platform2: BasePlatform,
     opportunity: dict,
+    db_manager: DBManager,
 ) -> None:
     """
     Executes an arbitrage opportunity by breaking it into chunks and ensuring
@@ -46,8 +48,11 @@ def place_arbitrage_orders(
             print(f"Invalid opportunity type: {opportunity['type']}. Aborting.")
             return
 
-        order1 = Order.create_market_buy_order(market1.market_id, side1, chunk_size, max_price_1)
-        order2 = Order.create_market_buy_order(market2.market_id, side2, chunk_size, max_price_2)
+        order1 = Order.create_market_buy_order(market1.market_id, market1.platform, side1, chunk_size, max_price_1)
+        order2 = Order.create_market_buy_order(market2.market_id, market2.platform, side2, chunk_size, max_price_2)
+        
+        order1.id = db_manager.add_order(order1)
+        order2.id = db_manager.add_order(order2)
 
         platform1.place_order(order1)
         platform2.place_order(order2)
@@ -62,7 +67,7 @@ def place_arbitrage_orders(
 
         print(f"Chunk orders placed. O1: {order1.order_id}, O2: {order2.order_id}. Awaiting execution...")
 
-        if not _wait_for_execution(platform1, order1, platform2, order2):
+        if not _wait_for_execution(platform1, order1, platform2, order2, db_manager):
             print("Failed to confirm chunk execution. Halting arbitrage.")
             return
 
@@ -70,7 +75,7 @@ def place_arbitrage_orders(
 
     print(f"Successfully executed all {total_shares} shares for the arbitrage opportunity.")
 
-def _wait_for_execution(p1: BasePlatform, o1: Order, p2: BasePlatform, o2: Order) -> bool:
+def _wait_for_execution(p1: BasePlatform, o1: Order, p2: BasePlatform, o2: Order, db_manager: DBManager) -> bool:
     """Polls two orders until they are both executed or a timeout is reached."""
     polling_timeout = int(os.getenv("POLLING_TIMEOUT_S", 30))
     start_time = time.time()
@@ -79,13 +84,21 @@ def _wait_for_execution(p1: BasePlatform, o1: Order, p2: BasePlatform, o2: Order
 
     while time.time() - start_time < polling_timeout:
         if not o1_filled:
-            p1.get_order_status(o1)
+            new_trades1 = p1.get_order_status(o1)
+            db_manager.update_order(o1)
+            if new_trades1:
+                db_manager.add_trades(new_trades1)
+
             if o1.status == OrderStatus.EXECUTED:
                 o1_filled = True
                 print(f"Order 1 ({o1.order_id}) confirmed EXECUTED.")
         
         if not o2_filled:
-            p2.get_order_status(o2)
+            new_trades2 = p2.get_order_status(o2)
+            db_manager.update_order(o2)
+            if new_trades2:
+                db_manager.add_trades(new_trades2)
+
             if o2.status == OrderStatus.EXECUTED:
                 o2_filled = True
                 print(f"Order 2 ({o2.order_id}) confirmed EXECUTED.")
@@ -99,7 +112,7 @@ def _wait_for_execution(p1: BasePlatform, o1: Order, p2: BasePlatform, o2: Order
             if o1.status == OrderStatus.OPEN: p1.cancel_order(o1)
             if o2.status == OrderStatus.OPEN: p2.cancel_order(o2)
             return False
-
+            
     print(f"Polling timed out after {polling_timeout}s. O1:{o1.status.value}, O2:{o2.status.value}.")
     if o1.status == OrderStatus.OPEN: p1.cancel_order(o1)
     if o2.status == OrderStatus.OPEN: p2.cancel_order(o2)
