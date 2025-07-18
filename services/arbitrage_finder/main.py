@@ -1,6 +1,7 @@
 import time
 import socket
 import os
+import signal
 from cache.RedisManager import RedisManager
 from db.DBManager import DBManager
 from models.PlatformType import PlatformType
@@ -23,6 +24,14 @@ class ArbitrageFinderService:
         self.consumer_name = f"arbitrage-consumer-{socket.gethostname()}"
         
         self.redis_manager.create_consumer_group(self.input_stream_name, self.group_name)
+        self.shutdown_requested = False
+        signal.signal(signal.SIGINT, self.request_shutdown)
+        signal.signal(signal.SIGTERM, self.request_shutdown)
+
+    def request_shutdown(self, signum, frame):
+        """Gracefully handle shutdown requests."""
+        print(f"Shutdown requested by signal {signum}. Finishing current cycle...")
+        self.shutdown_requested = True
 
     def process_market_pairs(self):
         """
@@ -95,9 +104,11 @@ class ArbitrageFinderService:
         """
         polling_interval = int(os.getenv("ARBITRAGE_POLLING_INTERVAL_S", 10))
         print(f"Starting Arbitrage Service with a {polling_interval} second interval...")
-        while True:
+        while not self.shutdown_requested:
             self.process_market_pairs()
-            time.sleep(polling_interval)
+            if not self.shutdown_requested:
+                time.sleep(polling_interval)
+        print("Arbitrage Finder Service shut down gracefully.")
 
 if __name__ == '__main__':
     arbitrage_service = ArbitrageFinderService()

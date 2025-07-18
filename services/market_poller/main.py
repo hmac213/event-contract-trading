@@ -1,5 +1,6 @@
 import time
 import os
+import signal
 from platforms.KalshiPlatform import KalshiPlatform
 from platforms.PolyMarketPlatform import PolyMarketPlatform
 from platforms.TestPlatform import TestPlatform
@@ -16,6 +17,14 @@ class MarketPollingService:
             TestPlatform()
         ]
         self.stream_name = "market_events_stream"
+        self.shutdown_requested = False
+        signal.signal(signal.SIGINT, self.request_shutdown)
+        signal.signal(signal.SIGTERM, self.request_shutdown)
+
+    def request_shutdown(self, signum, frame):
+        """Gracefully handle shutdown requests."""
+        print(f"Shutdown requested by signal {signum}. Finishing current cycle...")
+        self.shutdown_requested = True
 
     def poll_markets(self):
         """
@@ -62,9 +71,12 @@ class MarketPollingService:
         """
         polling_interval = int(os.getenv("POLLING_INTERVAL_S", 60))
         print(f"Starting Market Polling Service with a {polling_interval} second interval...")
-        while True:
+        while not self.shutdown_requested:
             self.poll_markets()
-            time.sleep(polling_interval)
+            # The sleep is interruptible by signals, so we check the flag again.
+            if not self.shutdown_requested:
+                time.sleep(polling_interval)
+        print("Market Polling Service shut down gracefully.")
 
 if __name__ == '__main__':
     polling_service = MarketPollingService()

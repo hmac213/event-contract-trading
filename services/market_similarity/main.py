@@ -2,6 +2,7 @@ import time
 import socket
 import os
 import instructor
+import signal
 from openai import OpenAI
 from pydantic import BaseModel
 from typing import List
@@ -30,6 +31,14 @@ class MarketSimilarityService:
 
         self.redis_manager.create_consumer_group(self.input_stream_name, self.group_name)
         self.client = instructor.patch(OpenAI())
+        self.shutdown_requested = False
+        signal.signal(signal.SIGINT, self.request_shutdown)
+        signal.signal(signal.SIGTERM, self.request_shutdown)
+
+    def request_shutdown(self, signum, frame):
+        """Gracefully handle shutdown requests."""
+        print(f"Shutdown requested by signal {signum}. Finishing current cycle...")
+        self.shutdown_requested = True
 
     def _check_gpt_similarity(self, market1: Market, market2: Market) -> bool:
         try:
@@ -129,9 +138,11 @@ class MarketSimilarityService:
         """
         polling_interval = int(os.getenv("SIMILARITY_POLLING_INTERVAL_S", 10))
         print(f"Starting Market Similarity Service with a {polling_interval} second interval...")
-        while True:
+        while not self.shutdown_requested:
             self.process_market_events()
-            time.sleep(polling_interval)
+            if not self.shutdown_requested:
+                time.sleep(polling_interval)
+        print("Market Similarity Service shut down gracefully.")
 
 if __name__ == '__main__':
     similarity_service = MarketSimilarityService()
