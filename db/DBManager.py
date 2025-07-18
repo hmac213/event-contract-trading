@@ -1,6 +1,6 @@
-from backend.models import PlatformType
-from backend.models.Market import Market
-from backend.models.Orderbook import Orderbook
+from models.PlatformType import PlatformType
+from models.Market import Market
+from models.Orderbook import Orderbook
 from supabase import create_client
 import os
 import math

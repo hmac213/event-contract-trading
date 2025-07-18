@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Command to run the service
-CMD ["python", "-m", "services.arbitrage-finder.main"] 
+CMD ["python", "-m", "services.market_similarity.main"] 

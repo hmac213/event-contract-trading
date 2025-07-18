@@ -4,19 +4,19 @@ import os
 from cache.RedisManager import RedisManager
 from db.DBManager import DBManager
 from models.PlatformType import PlatformType
-from platform.KalshiPlatform import KalshiPlatform
-from platform.PolyMarketPlatform import PolyMarketPlatform
-from .calculator import calculate_cross_platform_arbitrage
+from platforms.KalshiPlatform import KalshiPlatform
+from platforms.PolyMarketPlatform import PolyMarketPlatform
+from services.arbitrage_finder.calculator import calculate_cross_platform_arbitrage
 
-class ArbitrageService:
+class ArbitrageFinderService:
     def __init__(self):
         self.redis_manager = RedisManager()
         self.db_manager = DBManager()
         self.platforms = {
             PlatformType.KALSHI: KalshiPlatform(),
-            PlatformType.POLYMARKET: PolyMarketPlatform(),
+            PlatformType.POLYMARKET: PolyMarketPlatform()
         }
-
+        
         self.input_stream_name = "similar_market_pairs_stream"
         self.output_stream_name = "arbitrage_opportunities_stream"
         self.group_name = "arbitrage_group"
@@ -100,5 +100,5 @@ class ArbitrageService:
             time.sleep(polling_interval)
 
 if __name__ == '__main__':
-    arbitrage_service = ArbitrageService()
+    arbitrage_service = ArbitrageFinderService()
     arbitrage_service.run()

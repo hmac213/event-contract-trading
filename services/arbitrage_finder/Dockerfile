@@ -5,8 +5,6 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy the requirements file and install dependencies first
-# This leverages Docker's layer caching. The dependencies will only be re-installed
-# if the requirements.txt file changes.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -14,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Command to run the service
-CMD ["python", "-m", "services.market-poller.main"] 
+CMD ["python", "-m", "services.arbitrage_finder.main"] 

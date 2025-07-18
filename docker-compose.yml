@@ -10,10 +10,10 @@ services:
       - "data"
       - "trading"
 
-  market-poller:
+  market_poller:
     build:
       context: .
-      dockerfile: services/market-poller/Dockerfile
+      dockerfile: services/market_poller/Dockerfile
     env_file:
       - .env
       - .env.data
@@ -22,10 +22,10 @@ services:
     profiles:
       - "data"
 
-  market-similarity:
+  market_similarity:
     build:
       context: .
-      dockerfile: services/market-similarity/Dockerfile
+      dockerfile: services/market_similarity/Dockerfile
     env_file:
       - .env
       - .env.data
@@ -34,10 +34,10 @@ services:
     profiles:
       - "data"
 
-  arbitrage-finder:
+  arbitrage_finder:
     build:
       context: .
-      dockerfile: services/arbitrage-finder/Dockerfile
+      dockerfile: services/arbitrage_finder/Dockerfile
     env_file:
       - .env
       - .env.trading
@@ -46,10 +46,10 @@ services:
     profiles:
       - "trading"
   
-  trade-executor:
+  trade_executor:
     build:
       context: .
-      dockerfile: services/trade-executor/Dockerfile
+      dockerfile: services/trade_executor/Dockerfile
     env_file:
       - .env
       - .env.trading

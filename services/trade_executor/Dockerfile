@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Command to run the service
-CMD ["python", "-m", "services.market-similarity.main"] 
+CMD ["python", "-m", "services.trade_executor.main"] 

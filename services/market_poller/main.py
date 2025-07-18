@@ -1,8 +1,8 @@
 import time
 import os
-from platform.KalshiPlatform import KalshiPlatform
-from platform.PolyMarketPlatform import PolyMarketPlatform
-from platform.TestPlatform import TestPlatform
+from platforms.KalshiPlatform import KalshiPlatform
+from platforms.PolyMarketPlatform import PolyMarketPlatform
+from platforms.TestPlatform import TestPlatform
 from db.DBManager import DBManager
 from cache.RedisManager import RedisManager
 
@@ -24,7 +24,8 @@ class MarketPollingService:
         print("Polling for new markets...")
         for platform in self.platforms:
             try:
-                markets = platform.get_all_markets()
+                market_ids = platform.find_new_markets(100)
+                markets = platform.get_markets(market_ids)
                 for market in markets:
                     market_data = {
                         "market_id": market.market_id,
@@ -33,9 +34,27 @@ class MarketPollingService:
                         "rules": market.rules
                     }
                     self.redis_manager.add_to_stream(self.stream_name, market_data)
-                print(f"Found and streamed {len(markets)} markets on {platform.PLATFORM_NAME}")
+                platform_name = "Unknown"
+                if hasattr(platform, 'PLATFORM'):
+                    platform_name = platform.PLATFORM.value
+                elif isinstance(platform, KalshiPlatform):
+                    platform_name = "Kalshi"
+                elif isinstance(platform, PolyMarketPlatform):
+                    platform_name = "PolyMarket"
+                elif isinstance(platform, TestPlatform):
+                    platform_name = "Test"
+                print(f"Found and streamed {len(markets)} markets on {platform_name}")
             except Exception as e:
-                print(f"Error polling from {platform.PLATFORM_NAME}: {e}")
+                platform_name = "Unknown"
+                if hasattr(platform, 'PLATFORM'):
+                    platform_name = platform.PLATFORM.value
+                elif isinstance(platform, KalshiPlatform):
+                    platform_name = "Kalshi"
+                elif isinstance(platform, PolyMarketPlatform):
+                    platform_name = "PolyMarket"
+                elif isinstance(platform, TestPlatform):
+                    platform_name = "Test"
+                print(f"Error polling from {platform_name}: {e}")
 
     def run(self):
         """

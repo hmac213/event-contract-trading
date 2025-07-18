@@ -3,7 +3,7 @@ import os
 from models.Market import Market
 from models.Order import Order
 from models.OrderStatus import OrderStatus
-from platform.BasePlatform import BasePlatform
+from platforms.BasePlatform import BasePlatform
 
 POLLING_TIMEOUT_S = 30  # Max time to wait for a chunk to fill
 

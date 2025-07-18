@@ -5,9 +5,9 @@ import os
 from cache.RedisManager import RedisManager
 from db.DBManager import DBManager
 from models.PlatformType import PlatformType
-from platform.KalshiPlatform import KalshiPlatform
-from platform.PolyMarketPlatform import PolyMarketPlatform
-from .strategies.arbitrage_strategy import place_arbitrage_orders
+from platforms.KalshiPlatform import KalshiPlatform
+from platforms.PolyMarketPlatform import PolyMarketPlatform
+from services.trade_executor.strategies.arbitrage_strategy import create_arbitrage_orders
 
 class TradeExecutionService:
     def __init__(self):
@@ -57,7 +57,7 @@ class TradeExecutionService:
                     continue
 
                 print(f"Executing arbitrage trade for opportunity: {opportunity}")
-                place_arbitrage_orders(
+                create_arbitrage_orders(
                     market1, market2, platform1_client, platform2_client, opportunity
                 )
                 

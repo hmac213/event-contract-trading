@@ -4,11 +4,10 @@ import time
 from typing import List
 from models.Market import Market
 from models.Orderbook import Orderbook
-from platform.BasePlatform import BasePlatform
+from platforms.BasePlatform import BasePlatform
 from models.PlatformType import PlatformType
 from models.Order import Order
 import requests
-from dotenv import load_dotenv
 import asyncio
 import time
 import httpx
@@ -20,8 +19,6 @@ from cryptography.hazmat.backends import default_backend
 from requests.auth import AuthBase
 from urllib.parse import urlparse
 from models.OrderStatus import OrderStatus
-
-load_dotenv()  
 
 class KalshiAuth(AuthBase):
     def __init__(self, key_id: str, private_key: rsa.RSAPrivateKey):
@@ -109,6 +106,7 @@ class KalshiPlatform(BasePlatform):
 
         if not key_id or not private_key_pem:
             raise ValueError("KALSHI_ACCESS_KEY and KALSHI_PRIVATE_KEY environment variables must be set.")
+
         
         self.private_key = serialization.load_pem_private_key(
             private_key_pem.encode(),
@@ -130,7 +128,7 @@ class KalshiPlatform(BasePlatform):
             ]
             results = await asyncio.gather(*tasks)
             return [ob for ob in results if ob is not None]
-
+    
     async def _fetch_orderbook(self, session, base_url, market_id, markets):
         try:
             response = await session.get(f"{base_url}/markets/{market_id}/orderbook")

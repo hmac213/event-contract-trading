@@ -1,26 +1,54 @@
 import time
 import socket
 import os
-from backend.core.Similarity import SimilarityManager
+import instructor
+from openai import OpenAI
+from pydantic import BaseModel
+from typing import List
+
 from cache.RedisManager import RedisManager
 from db.DBManager import DBManager
 from models.Market import Market
 from models.PlatformType import PlatformType
+from services.market_similarity.db.pinecone_manager import SimilarityDBManager
+
+
+class MarketPrediction(BaseModel):
+    final_answer: bool
+
 
 class MarketSimilarityService:
     def __init__(self):
         self.redis_manager = RedisManager()
         self.db_manager = DBManager()
-        self.similarity_manager = SimilarityManager(self.db_manager)
+        self.similarity_db_manager = SimilarityDBManager()
         
         self.input_stream_name = "market_events_stream"
         self.output_stream_name = "similar_market_pairs_stream"
         self.group_name = "similarity_group"
-        # Use hostname to create a unique consumer name for this instance
         self.consumer_name = f"similarity-consumer-{socket.gethostname()}"
 
-        # Ensure the consumer group exists
         self.redis_manager.create_consumer_group(self.input_stream_name, self.group_name)
+        self.client = instructor.patch(OpenAI())
+
+    def _check_gpt_similarity(self, market1: Market, market2: Market) -> bool:
+        try:
+            model_name = os.getenv("GPT_MODEL_NAME", "gpt-4o-2024-08-06")
+            prediction: MarketPrediction = self.client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant whose job is to determine whether two event contract markets are IDENTICAL to each other."},
+                    {"role": "system", "content": "We define two event contracts to be IDENTICAL if and only if they track the same event outcome and resolve under the same rules."},
+                    {"role": "system", "content": "You may only establish two markets to be IDENTICAL if and only if you can determine with absolute certainty that the two markets meet the necessary criteria we outlined for IDENTICAL markets."},
+                    {"role": "system", "content": "If you deem the two markets to be IDENTICAL, you must return true and otherwise return false if there is even the slightest difference."},
+                    {"role": "user", "content": f"Are these two markets IDENTICAL? Market 1: {market1.name}, Rules: {market1.rules}. Market 2: {market2.name}, Rules: {market2.rules}."}
+                ],
+                response_model=MarketPrediction
+            )
+            return prediction.final_answer
+        except Exception as e:
+            print(f"An error occurred during GPT similarity check: {e}")
+            return False
 
     def process_market_events(self):
         """
@@ -36,29 +64,34 @@ class MarketSimilarityService:
         for message_id, message_data in messages:
             print(f"Processing message {message_id}: {message_data}")
             try:
-                # Reconstruct the market object from the message data
-                market = Market(
-                    market_id=message_data['market_id'],
-                    platform=PlatformType(message_data['platform']),
-                    name=message_data['name'],
-                    rules=message_data['rules']
-                )
+                message_data['platform'] = PlatformType(message_data['platform'])
+                market = Market(**message_data)
 
-                # Add the market to the database if it's not already there
                 if not self.db_manager.get_markets([market.market_id]):
                      self.db_manager.add_markets([market])
+                
+                self.similarity_db_manager.add_markets_to_index([market])
 
-                # Find similar markets
-                similar_markets = self.similarity_manager.find_similar_markets(market.market_id)
+                candidate_market_ids = self.similarity_db_manager.find_similar_markets(market)
+                
+                if not candidate_market_ids:
+                    self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)
+                    continue
 
-                if similar_markets:
-                    print(f"Found {len(similar_markets)} similar markets for {market.market_id}")
+                candidate_markets = self.db_manager.get_markets(candidate_market_ids)
+
+                identical_markets = []
+                for candidate_market in candidate_markets:
+                    if self._check_gpt_similarity(market, candidate_market):
+                        identical_markets.append(candidate_market)
+
+                if identical_markets:
+                    print(f"Found {len(identical_markets)} similar markets for {market.market_id}")
                     all_pairings = []
-                    for similar_market in similar_markets:
+                    for similar_market in identical_markets:
                         market_info_1 = {'market_id': market.market_id, 'platform': market.platform.value}
                         market_info_2 = {'market_id': similar_market.market_id, 'platform': similar_market.platform.value}
                         
-                        # Sort by market_id to ensure uniqueness, making the pair tuple hashable
                         if market_info_1['market_id'] > market_info_2['market_id']:
                             market_info_1, market_info_2 = market_info_2, market_info_1
 
@@ -70,7 +103,6 @@ class MarketSimilarityService:
 
                     unique_pairings = list(set(all_pairings))
                     if unique_pairings:
-                        # For the database, we only need the market IDs
                         db_pairs = [(p[0][0], p[1][0]) for p in unique_pairings]
                         self.db_manager.add_market_pairs(db_pairs)
 
@@ -84,7 +116,6 @@ class MarketSimilarityService:
                             self.redis_manager.add_to_stream(self.output_stream_name, pair_message)
                         print(f"Published {len(unique_pairings)} new market pairs.")
 
-                # Acknowledge the message was processed successfully
                 self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)
                 print(f"Successfully processed and acknowledged message {message_id}.")
 

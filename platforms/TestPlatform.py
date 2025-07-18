@@ -1,7 +1,7 @@
 # extends Base Market
 from models.Market import Market
 from models.Orderbook import Orderbook
-from platform.BasePlatform import BasePlatform
+from platforms.BasePlatform import BasePlatform
 from models.PlatformType import PlatformType
 from random import randint, random
 import time
@@ -68,9 +68,12 @@ class TestPlatform(BasePlatform):
             rules='Test Rules regarding ' + market_id,
             close_timestamp=int(time.time() * 1000)
         ) for market_id in market_ids]
-    
-    def place_order(self, order: Order):
-        pass
+
+    def place_order(self, order: Order) -> dict:
+        raise NotImplementedError
 
     def cancel_order(self, order: Order):
-        pass
+        raise NotImplementedError
+
+    def get_order_status(self, order: Order) -> None:
+        raise NotImplementedError

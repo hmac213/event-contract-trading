@@ -1,7 +1,7 @@
 from typing import List
 from models.Market import Market
 from models.Orderbook import Orderbook
-from platform.BasePlatform import BasePlatform
+from platforms.BasePlatform import BasePlatform
 from models.Order import Order
 from py_clob_client.client import ClobClient 
 from py_clob_client.clob_types import BookParams, OrderArgs, OrderType

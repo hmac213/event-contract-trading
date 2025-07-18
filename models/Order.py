@@ -1,6 +1,6 @@
 from typing import Optional, Self
 import uuid
-from backend.models.OrderStatus import OrderStatus
+from models.OrderStatus import OrderStatus
 
 class Order:
     def __init__(

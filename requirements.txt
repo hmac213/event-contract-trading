@@ -15,11 +15,11 @@ matplotlib
 
 aiohttp
 requests
-python-dotenv
-cryptography
+python-dotenvcryptography
 
 sentence-transformers
 pinecone
 instructor
 
 redis
+dotenv
