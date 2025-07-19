@@ -23,3 +23,5 @@ instructor
 
 redis
 dotenv
+
+web3

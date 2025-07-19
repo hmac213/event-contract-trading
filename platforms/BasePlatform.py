@@ -9,6 +9,13 @@ if TYPE_CHECKING:
     
 class BasePlatform(ABC):
     @abstractmethod
+    def get_balance(self) -> float:
+        """
+        Returns the cash balance of the account in USD.
+        """
+        pass
+
+    @abstractmethod
     def get_order_books(self, market_ids: list[str]) -> list["Orderbook"]:
         """
         Arguments:

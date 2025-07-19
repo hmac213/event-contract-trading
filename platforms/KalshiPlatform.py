@@ -120,6 +120,16 @@ class KalshiPlatform(BasePlatform):
 
         logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    def get_balance(self) -> float:
+        """
+        Fetches the user's cash balance from the Kalshi API.
+        """
+        response = self.session.get(f"{self.base_url}/portfolio/balance")
+        response.raise_for_status()
+        balance_data = response.json()
+        # Kalshi returns the balance in cents, so we divide by 100.
+        return float(balance_data.get("balance", 0)) / 100.0
+
     async def _get_order_books_async(self, market_ids: List[str], markets: dict) -> List[Orderbook]:
         auth = KalshiHttpxAuth(self.key_id, self.private_key)
         async with httpx.AsyncClient(auth=auth) as session:

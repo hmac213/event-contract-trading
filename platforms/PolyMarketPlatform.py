@@ -18,6 +18,7 @@ import time
 from py_clob_client.order_builder.constants import BUY, SELL
 from models.OrderStatus import OrderStatus
 from models.Trade import Trade
+from web3 import Web3
 
 load_dotenv()  
 class PolyMarketPlatform(BasePlatform):
@@ -40,6 +41,28 @@ class PolyMarketPlatform(BasePlatform):
         # for Gamma API access
         self.base_url = "https://gamma-api.polymarket.com"
         self.client.set_api_creds(self.client.create_or_derive_api_creds())
+
+    def get_balance(self) -> float:
+        """
+        Fetches the USDC balance of the user's proxy contract from the Polygon blockchain.
+        This represents the funds "deposited" and available for trading on PolyMarket.
+        """
+        # Connect to the Polygon network
+        w3 = Web3(Web3.HTTPProvider("https://polygon-rpc.com/"))
+
+        balance_of_abi = [{"constant": True, "inputs": [{"name": "_owner", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "balance", "type": "uint256"}], "type": "function"}]
+        usdc_contract_address = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+        usdc_contract = w3.eth.contract(address=usdc_contract_address, abi=balance_of_abi)
+
+        proxy_address = os.getenv("PROXY_ADDRESS")
+        if not proxy_address:
+            raise ValueError("PROXY_ADDRESS environment variable not set.")
+        
+        checksum_proxy_address = Web3.to_checksum_address(proxy_address)
+        balance_wei = usdc_contract.functions.balanceOf(checksum_proxy_address).call()
+        balance_usd = float(balance_wei / (10**6))
+        
+        return balance_usd
 
     def _get_trade(self, trade_id: str) -> dict:
         """Fetches a single trade by its ID."""
