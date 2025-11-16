@@ -11,6 +11,11 @@ from random import randint
 from models.Order import Order
 
 class TestPlatform(BasePlatform):
+    def get_balance(self) -> float:
+        """
+        Returns a dummy balance for testing purposes.
+        """
+        return 10000.0  # $10,000 dummy balance
     def get_order_books(self, market_ids: list[str]) -> list[Orderbook]:
 
         if market_ids is None:

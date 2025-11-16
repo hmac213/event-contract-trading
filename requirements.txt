@@ -15,7 +15,8 @@ matplotlib
 
 aiohttp
 requests
-python-dotenvcryptography
+python-dotenv
+cryptography
 
 sentence-transformers
 pinecone

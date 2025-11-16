@@ -12,6 +12,7 @@ from db.DBManager import DBManager
 from models.Market import Market
 from models.PlatformType import PlatformType
 from services.market_similarity.db.pinecone_manager import SimilarityDBManager
+from utils.startup_coordinator import StartupCoordinator
 
 
 class MarketPrediction(BaseModel):
@@ -23,6 +24,7 @@ class MarketSimilarityService:
         self.redis_manager = RedisManager()
         self.db_manager = DBManager()
         self.similarity_db_manager = SimilarityDBManager()
+        self.startup_coordinator = StartupCoordinator()
         
         self.input_stream_name = "market_events_stream"
         self.output_stream_name = "similar_market_pairs_stream"
@@ -32,6 +34,11 @@ class MarketSimilarityService:
         self.redis_manager.create_consumer_group(self.input_stream_name, self.group_name)
         self.client = instructor.patch(OpenAI())
         self.shutdown_requested = False
+        
+        # Track already-compared market pairs to avoid duplicates
+        self.compared_pairs = set()
+        self.similarity_threshold = float(os.getenv("SIMILARITY_THRESHOLD", "0.7"))
+        
         signal.signal(signal.SIGINT, self.request_shutdown)
         signal.signal(signal.SIGTERM, self.request_shutdown)
 
@@ -39,6 +46,20 @@ class MarketSimilarityService:
         """Gracefully handle shutdown requests."""
         print(f"Shutdown requested by signal {signum}. Finishing current cycle...")
         self.shutdown_requested = True
+
+    def _get_canonical_pair(self, market1_id: str, market2_id: str) -> tuple:
+        """Get canonical ordering of market pair for deduplication."""
+        return tuple(sorted([market1_id, market2_id]))
+
+    def _already_compared(self, market1_id: str, market2_id: str) -> bool:
+        """Check if this market pair has already been compared."""
+        pair = self._get_canonical_pair(market1_id, market2_id)
+        return pair in self.compared_pairs
+
+    def _mark_compared(self, market1_id: str, market2_id: str) -> None:
+        """Mark this market pair as already compared."""
+        pair = self._get_canonical_pair(market1_id, market2_id)
+        self.compared_pairs.add(pair)
 
     def _check_gpt_similarity(self, market1: Market, market2: Market) -> bool:
         try:
@@ -73,24 +94,59 @@ class MarketSimilarityService:
         for message_id, message_data in messages:
             print(f"Processing message {message_id}: {message_data}")
             try:
-                message_data['platform'] = PlatformType(message_data['platform'])
-                market = Market(**message_data)
+                # Validate required fields
+                required_fields = ['market_id', 'platform', 'name', 'rules']
+                missing_fields = [field for field in required_fields if field not in message_data]
+                
+                if missing_fields:
+                    print(f"⚠️ Skipping message {message_id}: Missing required fields: {missing_fields}")
+                    self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)
+                    continue
+                
+                # Use robust Market creation from stream data
+                market = Market.from_stream_data(message_data)
+                print(f"✅ Successfully created market: {market.market_id}")
 
-                if not self.db_manager.get_markets([market.market_id]):
-                     self.db_manager.add_markets([market])
+                # Market should already be in DB from market_poller, but check just in case
+                existing_markets = self.db_manager.get_markets([market.market_id])
+                if not existing_markets:
+                    print(f"⚠️ Market {market.market_id} not found in DB, this shouldn't happen")
+                    continue
                 
                 self.similarity_db_manager.add_markets_to_index([market])
 
-                candidate_market_ids = self.similarity_db_manager.find_similar_markets(market)
+                candidate_market_ids = self.similarity_db_manager.find_similar_markets(market, self.similarity_threshold)
                 
                 if not candidate_market_ids:
+                    print(f"🔍 No similar markets found above threshold {self.similarity_threshold} for {market.market_id}")
                     self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)
                     continue
 
-                candidate_markets = self.db_manager.get_markets(candidate_market_ids)
+                # Filter out already-compared pairs
+                new_candidate_ids = []
+                skipped_count = 0
+                for candidate_id in candidate_market_ids:
+                    if not self._already_compared(market.market_id, candidate_id):
+                        new_candidate_ids.append(candidate_id)
+                    else:
+                        skipped_count += 1
+
+                if skipped_count > 0:
+                    print(f"⏭️ Skipped {skipped_count} already-compared pairs for {market.market_id}")
+
+                if not new_candidate_ids:
+                    print(f"🔄 All candidates for {market.market_id} already compared")
+                    self.redis_manager.acknowledge_message(self.input_stream_name, self.group_name, message_id)
+                    continue
+
+                candidate_markets = self.db_manager.get_markets(new_candidate_ids)
+                print(f"🧠 Running GPT verification on {len(candidate_markets)} new pairs for {market.market_id}")
 
                 identical_markets = []
                 for candidate_market in candidate_markets:
+                    # Mark this pair as compared regardless of result
+                    self._mark_compared(market.market_id, candidate_market.market_id)
+                    
                     if self._check_gpt_similarity(market, candidate_market):
                         identical_markets.append(candidate_market)
 
@@ -134,14 +190,42 @@ class MarketSimilarityService:
 
     def run(self):
         """
-        Runs the similarity service indefinitely.
+        Runs the similarity service with startup coordination.
         """
         polling_interval = int(os.getenv("SIMILARITY_POLLING_INTERVAL_S", 10))
-        print(f"Starting Market Similarity Service with a {polling_interval} second interval...")
-        while not self.shutdown_requested:
-            self.process_market_events()
-            if not self.shutdown_requested:
-                time.sleep(polling_interval)
+        wait_for_market_poller = os.getenv("WAIT_FOR_MARKET_POLLER", "true").lower() == "true"
+        
+        print(f"🚀 Starting Market Similarity Service...")
+        print(f"⏰ Polling interval: {polling_interval}s")
+        print(f"🎯 Wait for market poller: {wait_for_market_poller}")
+        print(f"📊 Similarity threshold: {self.similarity_threshold}")
+        print(f"🚀 Optimizations: Duplicate tracking enabled, threshold filtering enabled")
+        
+        self.startup_coordinator.set_startup_phase("market_similarity", "initializing")
+        
+        try:
+            # Wait for market poller to complete initial load
+            if wait_for_market_poller:
+                print("⏳ Waiting for market poller to complete initial data load...")
+                if self.startup_coordinator.wait_for_initial_load("market_poller", timeout=600):
+                    print("✅ Market poller initial load complete, starting similarity processing")
+                else:
+                    print("⚠️ Timeout waiting for market poller, proceeding anyway")
+            
+            # Signal ready and start processing
+            self.startup_coordinator.signal_service_ready("market_similarity")
+            print("🔄 Starting market similarity processing...")
+            
+            while not self.shutdown_requested:
+                self.process_market_events()
+                if not self.shutdown_requested:
+                    time.sleep(polling_interval)
+                    
+        except Exception as e:
+            print(f"❌ Fatal error in market similarity service: {e}")
+            self.startup_coordinator.set_startup_phase("market_similarity", "failed")
+            raise
+                    
         print("Market Similarity Service shut down gracefully.")
 
 if __name__ == '__main__':

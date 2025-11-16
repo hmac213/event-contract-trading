@@ -245,8 +245,19 @@ class PolyMarketPlatform(BasePlatform):
                 if cid in market_id_set:
                 
                     iso = m["endDate"]
-                    dt = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ")
-                    unix_ts = int(dt.timestamp())
+                    # Handle timestamps with or without milliseconds
+                    try:
+                        # Try with milliseconds first (e.g., "2025-10-04T23:59:59.999Z")
+                        dt = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    except ValueError:
+                        try:
+                            # Fallback to without milliseconds (e.g., "2025-10-04T23:59:59Z")
+                            dt = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ")
+                        except ValueError:
+                            # Log the problematic timestamp and skip this market
+                            print(f"⚠️ Could not parse timestamp '{iso}' for market {cid}, skipping")
+                            continue
+                    unix_ts = int(dt.timestamp() * 1000)  # Convert to milliseconds to match PolyMarket's format
 
                     matched_markets.append(Market(
                         platform=PlatformType.POLYMARKET,

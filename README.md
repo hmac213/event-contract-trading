@@ -207,3 +207,63 @@ graph TB
     DBManager --> PostgreSQL
     FastAPI --> DBManager
 ```
+
+## 🎭 Mock Trading System
+
+For risk-free strategy testing, we've implemented a comprehensive mock trading system that simulates trade execution while using **real market data** and **real arbitrage detection**.
+
+### Key Features
+
+- **🔥 Real Data**: Uses live market data from Kalshi and PolyMarket APIs
+- **🎯 Real Logic**: Same arbitrage detection and opportunity finding
+- **💰 Mock Money**: Starts with $50,000 virtual balance per platform
+- **📊 Full Analytics**: Complete P&L tracking and performance metrics
+- **🔄 Seamless Integration**: Plugs into existing pipeline without interference
+
+### Quick Start
+
+```bash
+# 1. Set up mock database tables
+psql -d your_database -f services/mock_trade_executor/schema.sql
+
+# 2. Initialize mock balances
+python services/mock_trade_executor/mock_trading_cli.py init
+
+# 3. Run the mock trading pipeline
+docker-compose --profile mock-trading up
+```
+
+### Monitor Your Performance
+
+```bash
+# Check balances
+python services/mock_trade_executor/mock_trading_cli.py balances
+
+# View detailed statistics
+python services/mock_trade_executor/mock_trading_cli.py stats
+```
+
+### Example Output
+
+```
+📊 Mock Trading Statistics:
+==================================================
+
+💰 Current Balances:
+  kalshi       : $ 49,234.56 (P&L: $  -765.44 /  -1.53%)
+  polymarket   : $ 50,891.23 (P&L: $   891.23 /   1.78%)
+
+🎯 Overall Performance:
+  Total P&L       : $   125.79 (   0.13%)
+  Starting Capital: $100,000.00
+  Current Capital : $100,125.79
+==================================================
+```
+
+The mock trading system is perfect for:
+- 🧪 **Strategy Development**: Test new approaches safely
+- 📈 **Performance Analysis**: Understand your strategy's behavior
+- 🎓 **Learning**: Explore the system without financial risk
+- 🔧 **Pipeline Testing**: Validate the entire trading workflow
+
+See [services/mock_trade_executor/README.md](services/mock_trade_executor/README.md) for complete documentation.

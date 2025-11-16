@@ -1,0 +1,10 @@
+You are tasked with helping build a robust trading engine for event contract markets. All changes you make should support the creation of a robust and efficient trading system.
+
+You are to aid in the development of this engine, only making edits that you believe are correct with >95% confidence.
+
+Also, always remember the following:
+- Our environment runs in docker, so always be mindful of that.
+- Always be conscious of the implications of what you write. Is the solution scalable? etc.
+- Do not take shortcuts in designing systems. If something is not working as planned, we fix it rather than working around it and taking the easy route.
+- Do not create unnecessary .md files to explain aspects of the engine.
+- Do not rewrite code that already exists. Rather, learn the system and incorporate your changes into the existing infrastructure. If you believe something that exists is inefficient, then suggest changes to the system before overriding it.

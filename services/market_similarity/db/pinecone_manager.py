@@ -49,12 +49,22 @@ class SimilarityDBManager:
                 batch = records_to_upsert[i:i+100]
                 self.index.upsert_records(records=batch, namespace="__default__")
 
-    def find_similar_markets(self, market: Market) -> List[str]:
+    def find_similar_markets(self, market: Market, similarity_threshold: float = 0.7) -> List[str]:
+        """
+        Find similar markets using vector similarity search.
+        
+        Args:
+            market: The market to find similarities for
+            similarity_threshold: Minimum similarity score (0.0-1.0) to consider a match
+        
+        Returns:
+            List of market IDs that are similar enough to warrant GPT verification
+        """
         query_response = self.index.search(
             namespace="__default__",
             query={
                 "inputs": {"text": market.name},
-                "top_k": 3,
+                "top_k": 10,  # Get more candidates to filter by threshold
                 "filter": {
                     "platform": {"$ne": market.platform.value},
                     "type": "name"
@@ -63,4 +73,15 @@ class SimilarityDBManager:
             fields=["market_id"]
         )
 
-        return [match['fields']['market_id'] for match in query_response['result']['hits'] if 'market_id' in match['fields']]
+        # Filter results by similarity threshold and limit to top 3
+        similar_markets = []
+        for match in query_response['result']['hits']:
+            if 'market_id' in match['fields'] and match['score'] >= similarity_threshold:
+                similar_markets.append(match['fields']['market_id'])
+                if len(similar_markets) >= 3:  # Still limit to max 3 for GPT efficiency
+                    break
+        
+        print(f"🔍 Vector search found {len(query_response['result']['hits'])} candidates, "
+              f"{len(similar_markets)} above threshold {similarity_threshold}")
+        
+        return similar_markets

@@ -9,6 +9,7 @@ services:
       - "core"
       - "data"
       - "trading"
+      - "mock-trading"
 
   market_poller:
     build:
@@ -17,10 +18,16 @@ services:
     env_file:
       - .env
       - .env.data
+    environment:
+      - REDIS_HOST=redis
+      - INITIAL_POLLING_INTERVAL_S=15
+      - POLLING_INTERVAL_S=60
+      - ENABLE_BULK_LOAD=true
     depends_on:
       - redis
     profiles:
       - "data"
+      - "mock-trading"
 
   market_similarity:
     build:
@@ -29,10 +36,17 @@ services:
     env_file:
       - .env
       - .env.data
+    environment:
+      - REDIS_HOST=redis
+      - SIMILARITY_POLLING_INTERVAL_S=5
+      - WAIT_FOR_MARKET_POLLER=true
+      - SIMILARITY_THRESHOLD=0.7
     depends_on:
       - redis
+      - market_poller
     profiles:
       - "data"
+      - "mock-trading"
 
   arbitrage_finder:
     build:
@@ -41,10 +55,15 @@ services:
     env_file:
       - .env
       - .env.trading
+    environment:
+      - REDIS_HOST=redis
+      - ARBITRAGE_POLLING_INTERVAL_S=5
     depends_on:
       - redis
+      - market_similarity
     profiles:
       - "trading"
+      - "mock-trading"
   
   trade_executor:
     build:
@@ -53,10 +72,29 @@ services:
     env_file:
       - .env
       - .env.trading
+    environment:
+      - REDIS_HOST=redis
     depends_on:
       - redis
     profiles:
       - "trading"
+
+  mock_trade_executor:
+    build:
+      context: .
+      dockerfile: services/mock_trade_executor/Dockerfile
+    env_file:
+      - .env
+      - .env.trading
+    depends_on:
+      - redis
+      - arbitrage_finder
+    profiles:
+      - "mock-trading"
+    environment:
+      - REDIS_HOST=redis
+      - MOCK_EXECUTION_DELAY_S=1.0
+      - MOCK_TRADE_POLLING_INTERVAL_S=5
 
 volumes:
   redis-data: 
